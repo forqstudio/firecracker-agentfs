@@ -1,0 +1,9 @@
+.agentfs/
+bin/
+linux-amazon/
+rootfs/
+vmlinux
+vm_config.*.json
+
+.DS_Store
+*.log

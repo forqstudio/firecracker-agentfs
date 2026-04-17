@@ -57,8 +57,8 @@ Guest-side:
 
 ## Guest Defaults
 
-- hostname: `agentvm`
-- user: `dev`
+- hostname: `alcatraz`
+- user: `al`
 - password: `dev` by default, configurable with `VM_USER_PASSWORD`
 - sudo: passwordless
 - working directory after login: `/workspace`
@@ -129,7 +129,7 @@ Relevant development libraries installed in the guest:
 Single command for first-time setup and launch:
 
 ```bash
-cd /home/mitko/dev/firecracker-agentfs
+cd /home/dev/Workspace/firecracker-agentfs
 chmod +x run.sh build-kernel.sh build-rootfs.sh firecracker.sh
 ./run.sh
 ```
@@ -154,7 +154,7 @@ RESET_AGENTFS=1 ./run.sh --build-all my-agent
 If you want the explicit manual steps instead:
 
 ```bash
-cd /home/mitko/dev/firecracker-agentfs
+cd /home/dev/workspace/firecracker-agentfs
 chmod +x build-kernel.sh build-rootfs.sh firecracker.sh
 ./build-kernel.sh
 ./build-rootfs.sh
@@ -169,7 +169,7 @@ What those scripts do:
 
 ```bash
 ./run.sh
-```
+```ssh al@172.16.0.2
 
 or directly:
 
@@ -264,7 +264,7 @@ HOST_LOOPBACK_PORTS= ./run.sh
 - Overlay DB: `.agentfs/<agent-id>.db`
 - Base stamp: `.agentfs/<agent-id>.base-stamp`
 
-The launcher hashes `rootfs/etc/agentvm-release` and refuses to silently reuse an overlay against a changed base rootfs. If the base image changed, either:
+The launcher hashes `rootfs/etc/alcatraz-release` and refuses to silently reuse an overlay against a changed base rootfs. If the base image changed, either:
 - use a new agent id, or
 - run with `RESET_AGENTFS=1`
 
@@ -289,7 +289,7 @@ Build-time:
 RESET_AGENTFS=1 ./run.sh --build-rootfs my-agent
 NODE_MAJOR=20 ./build-rootfs.sh
 RUST_TOOLCHAIN=stable ./build-rootfs.sh
-VM_USER=dev VM_USER_PASSWORD=dev VM_HOSTNAME=agentvm ./build-rootfs.sh
+VM_USER=dev VM_USER_PASSWORD=dev VM_HOSTNAME=alcatraz ./build-rootfs.sh
 KERNEL_TAG=microvm-kernel-6.1.167-27.319.amzn2023 ./build-kernel.sh
 ```
 

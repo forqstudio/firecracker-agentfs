@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KERNEL_DIR="${KERNEL_DIR:-${SCRIPT_DIR}/linux-amazon}"
-KERNEL_TAG="${KERNEL_TAG:-microvm-kernel-6.1.167-27.319.amzn2023}"
+KERNEL_TAG="${KERNEL_TAG:-microvm-kernel-6.1.166-24.303.amzn2023}"
 
 log() {
     echo "==> $*"

@@ -15,7 +15,7 @@ AGENTFS_BIN="${AGENTFS_BIN:-}"
 AGENT_ID="${1:-firecracker-dev}"
 AGENTFS_DIR="${SCRIPT_DIR}/.agentfs"
 DB_PATH="${AGENTFS_DIR}/${AGENT_ID}.db"
-BASE_STAMP_FILE="${ROOTFS_DIR}/etc/agentvm-release"
+BASE_STAMP_FILE="${ROOTFS_DIR}/etc/alcatraz-release"
 BASE_STAMP_PATH="${AGENTFS_DIR}/${AGENT_ID}.base-stamp"
 
 TAP_DEV="${TAP_DEV:-fc-tap0}"
@@ -26,7 +26,7 @@ HOST_IFACE="${HOST_IFACE:-$(ip route show default | awk '/default/ {print $5; ex
 NFS_PORT="${NFS_PORT:-11111}"
 HOST_LOOPBACK_PORTS="${HOST_LOOPBACK_PORTS:-8000:8010}"
 
-VM_HOSTNAME="${VM_HOSTNAME:-agentvm}"
+VM_HOSTNAME="${VM_HOSTNAME:-alcatraz}"
 VM_VCPUS="${VM_VCPUS:-4}"
 VM_MEM_MIB="${VM_MEM_MIB:-8192}"
 FIRECRACKER_LOG_LEVEL="${FIRECRACKER_LOG_LEVEL:-Error}"
@@ -109,7 +109,7 @@ resolve_agentfs_bin() {
 ensure_requirements() {
     [ -f "${KERNEL_PATH}" ] || die "Kernel not found at ${KERNEL_PATH}. Run ./build-kernel.sh first."
     [ -d "${ROOTFS_DIR}" ] || die "Rootfs not found at ${ROOTFS_DIR}. Run ./build-rootfs.sh first."
-    [ -f "${BASE_STAMP_FILE}" ] || die "Rootfs at ${ROOTFS_DIR} is missing etc/agentvm-release. Rebuild it with ./build-rootfs.sh."
+    [ -f "${BASE_STAMP_FILE}" ] || die "Rootfs at ${ROOTFS_DIR} is missing etc/alcatraz-release. Rebuild it with ./build-rootfs.sh."
     [ -n "${HOST_IFACE}" ] || die "Could not determine the host uplink interface. Set HOST_IFACE explicitly."
 }
 

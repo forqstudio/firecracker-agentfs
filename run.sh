@@ -83,7 +83,7 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-ROOTFS_SENTINEL="${ROOTFS_DIR}/etc/agentvm-release"
+ROOTFS_SENTINEL="${ROOTFS_DIR}/etc/alcatraz-release"
 OVERLAY_DB="${AGENTFS_DIR}/${AGENT_ID}.db"
 
 if should_build "${BUILD_KERNEL_MODE}" "${KERNEL_PATH}"; then

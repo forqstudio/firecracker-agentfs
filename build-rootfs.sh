@@ -6,9 +6,9 @@ ROOTFS_DIR="${ROOTFS_DIR:-${SCRIPT_DIR}/rootfs}"
 ROOTFS_RELEASE="${ROOTFS_RELEASE:-noble}"
 ROOTFS_MIRROR="${ROOTFS_MIRROR:-http://archive.ubuntu.com/ubuntu}"
 ROOTFS_ARCH="${ROOTFS_ARCH:-amd64}"
-VM_USER="${VM_USER:-dev}"
+VM_USER="${VM_USER:-al}"
 VM_USER_PASSWORD="${VM_USER_PASSWORD:-dev}"
-VM_HOSTNAME="${VM_HOSTNAME:-agentvm}"
+VM_HOSTNAME="${VM_HOSTNAME:-alcatraz}"
 NODE_MAJOR="${NODE_MAJOR:-20}"
 PI_PACKAGE="${PI_PACKAGE:-@mariozechner/pi-coding-agent@latest}"
 RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
@@ -237,7 +237,7 @@ VM_GID="$(awk -F: -v user="${VM_USER}" '$1 == user { print $4 }' "${ROOTFS_DIR}/
 
 log "Configuring SSH access"
 chroot_run "install -d -m 0755 /etc/ssh/sshd_config.d"
-sudo tee "${ROOTFS_DIR}/etc/ssh/sshd_config.d/agentvm.conf" >/dev/null <<EOF
+sudo tee "${ROOTFS_DIR}/etc/ssh/sshd_config.d/alcatraz.conf" >/dev/null <<EOF
 PasswordAuthentication yes
 PubkeyAuthentication yes
 KbdInteractiveAuthentication no
@@ -314,7 +314,7 @@ SSH: ssh ${VM_USER}@172.16.0.2
 Password: ${VM_USER_PASSWORD}
 EOF
 
-sudo tee "${ROOTFS_DIR}/etc/agentvm-release" >/dev/null <<EOF
+sudo tee "${ROOTFS_DIR}/etc/alcatraz-release" >/dev/null <<EOF
 base_os=ubuntu:${ROOTFS_RELEASE}
 node_channel=${NODE_MAJOR}.x
 pi_package=${PI_PACKAGE}

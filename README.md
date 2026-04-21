@@ -344,26 +344,6 @@ cd alcatraz.worker
 make test
 ```
 
-## Shell Script (Alternative)
-
-The shell scripts (`run.sh`, `firecracker.sh`) can also be used to launch a single VM directly:
-
-```bash
-chmod +x alcatraz.core/run.sh alcatraz.core/firecracker.sh alcatraz.core/build-kernel.sh alcatraz.core/build-rootfs.sh
-./alcatraz.core/run.sh
-```
-
-See earlier sections for details on `run.sh`, `firecracker.sh`, `build-rootfs.sh`, and `build-kernel.sh`.
-
-Use a different password:
-
-```bash
-VM_USER_PASSWORD='something-better' ./alcatraz.core/build-rootfs.sh
-RESET_AGENTFS=1 ./alcatraz.core/run.sh --build-rootfs my-agent
-```
-
-If host SSH public keys exist in `~/.ssh/*.pub` at rootfs build time, they are copied into the guest user's `authorized_keys`.
-
 ## Reaching Host Localhost Services
 
 Guest `127.0.0.1` is the VM itself, not the host. To reach host services that are bound only to host localhost, connect from the VM to the host TAP IP instead:

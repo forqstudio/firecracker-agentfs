@@ -72,15 +72,7 @@ Guest-side:
 
 ## Guest Tooling
 
-Base development tools:
-- `git`, `git-lfs`, `gh`
-- `ripgrep`, `fd`, `bat`, `jq`, `tmux`, `tree`, `htop`, `strace`
-- `vim`, `neovim`, `nano`
-- `curl`, `wget`, `rsync`, `zip`, `unzip`
-- `clang`, `lld`, `llvm`, `cmake`, `ninja-build`, `gdb`, `pkg-config`
-- `sqlite3`, `shellcheck`
-
-### Installed APT Packages
+Installed APT packages:
 
 - **apt-utils** - APT package management utilities
 - **apt-transport-https** - Download packages over HTTPS

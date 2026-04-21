@@ -82,78 +82,76 @@ Base development tools:
 
 ### Installed APT Packages
 
-| Package | Purpose |
-|---------|---------|
-| apt-utils | APT package management utilities |
-| apt-transport-https | Download packages over HTTPS |
-| bash-completion | Bash command completion |
-| bat | Cat clone with syntax highlighting and line numbers |
-| build-essential | GCC, make, g++ and other essential build tools |
-| ca-certificates | SSL/TLS root certificates for HTTPS |
-| clang | C/C++ compiler based on LLVM |
-| cmake | Cross-platform build system generator |
-| curl | Command-line HTTP client for downloading files |
-| dnsutils | DNS lookup tools (dig, nslookup, host) |
-| fd-find | Fast alternative to find with better defaults |
-| file | Determine file type by content |
-| fzf | Fuzzy finder for interactive filtering |
-| gdb | GNU debugger for debugging programs |
-| git | Distributed version control system |
-| git-lfs | Git extension for handling large files |
-| gnupg | GNU Privacy Guard for encryption and signing |
-| htop | Interactive process viewer with colors |
-| iproute2 | Modern network tools (ip, ss, bridge) |
-| iputils-ping | ICMP ping utility |
-| jq | Command-line JSON processor |
-| less | Terminal pager for viewing long output |
-| libbz2-dev | bzip2 compression library development files |
-| libclang-dev | Clang development headers |
-| libffi-dev | Foreign function interface development files |
-| libgdbm-dev | GDBM database library development files |
-| liblzma-dev | LZMA compression development files |
-| libncurses5-dev | ncurses terminal UI library (legacy version) |
-| libncursesw5-dev | ncurses wide character support |
-| libreadline-dev | GNU readline library development files |
-| libsqlite3-dev | SQLite3 database development files |
-| libssl-dev | OpenSSL development files |
-| libxml2-dev | XML library development files |
-| libxmlsec1-dev | XML security library development files |
-| libyaml-dev | YAML parsing library development files |
-| lld | LLVM linker |
-| locales | Locale data for internationalization |
-| llvm | LLVM compiler toolchain base |
-| man-db | Manual page database and viewer |
-| manpages | Manual page files |
-| nano | Simple text editor |
-| neovim | Modern fork of vim |
-| net-tools | Legacy network utilities (ifconfig, netstat, route) |
-| ninja-build | Small build system focused on speed |
-| openssh-client | SSH client (ssh, scp, sftp) |
-| openssh-server | SSH server daemon |
-| pkg-config | Library configuration tool |
-| procps | Process utilities (ps, top, uptime) |
-| psmisc | Miscellaneous process utilities (pkill, pstree) |
-| python-is-python3 | Symlinks python to python3 |
-| python3 | Python 3 interpreter |
-| python3-dev | Python 3 development headers |
-| python3-pip | Python package manager |
-| python3-setuptools | Python packaging tools |
-| python3-venv | Python 3 virtual environment |
-| python3-wheel | Python wheel package format |
-| ripgrep | Fast grep replacement optimized for code |
-| rsync | Fast file transfer and sync utility |
-| shellcheck | Shell script static analysis tool |
-| sqlite3 | SQLite command-line interface |
-| strace | System call tracer for debugging |
-| sudo | Execute commands as another user (passwordless for dev) |
-| tmux | Terminal multiplexer |
-| tree | Display directory tree structure |
-| unzip | ZIP archive extraction utility |
-| vim | Text editor |
-| wget | Non-interactive file downloader |
-| xz-utils | XZ compression utilities |
-| zip | ZIP archive creation utility |
-| zsh | Z shell with extended features |
+- **apt-utils** - APT package management utilities
+- **apt-transport-https** - Download packages over HTTPS
+- **bash-completion** - Bash command completion
+- **bat** - Cat clone with syntax highlighting and line numbers
+- **build-essential** - GCC, make, g++ and other essential build tools
+- **ca-certificates** - SSL/TLS root certificates for HTTPS
+- **clang** - C/C++ compiler based on LLVM
+- **cmake** - Cross-platform build system generator
+- **curl** - Command-line HTTP client for downloading files
+- **dnsutils** - DNS lookup tools (dig, nslookup, host)
+- **fd-find** - Fast alternative to find with better defaults
+- **file** - Determine file type by content
+- **fzf** - Fuzzy finder for interactive filtering
+- **gdb** - GNU debugger for debugging programs
+- **git** - Distributed version control system
+- **git-lfs** - Git extension for handling large files
+- **gnupg** - GNU Privacy Guard for encryption and signing
+- **htop** - Interactive process viewer with colors
+- **iproute2** - Modern network tools (ip, ss, bridge)
+- **iputils-ping** - ICMP ping utility
+- **jq** - Command-line JSON processor
+- **less** - Terminal pager for viewing long output
+- **libbz2-dev** - bzip2 compression library development files
+- **libclang-dev** - Clang development headers
+- **libffi-dev** - Foreign function interface development files
+- **libgdbm-dev** - GDBM database library development files
+- **liblzma-dev** - LZMA compression development files
+- **libncurses5-dev** - ncurses terminal UI library (legacy version)
+- **libncursesw5-dev** - ncurses wide character support
+- **libreadline-dev** - GNU readline library development files
+- **libsqlite3-dev** - SQLite3 database development files
+- **libssl-dev** - OpenSSL development files
+- **libxml2-dev** - XML library development files
+- **libxmlsec1-dev** - XML security library development files
+- **libyaml-dev** - YAML parsing library development files
+- **lld** - LLVM linker
+- **locales** - Locale data for internationalization
+- **llvm** - LLVM compiler toolchain base
+- **man-db** - Manual page database and viewer
+- **manpages** - Manual page files
+- **nano** - Simple text editor
+- **neovim** - Modern fork of vim
+- **net-tools** - Legacy network utilities (ifconfig, netstat, route)
+- **ninja-build** - Small build system focused on speed
+- **openssh-client** - SSH client (ssh, scp, sftp)
+- **openssh-server** - SSH server daemon
+- **pkg-config** - Library configuration tool
+- **procps** - Process utilities (ps, top, uptime)
+- **psmisc** - Miscellaneous process utilities (pkill, pstree)
+- **python-is-python3** - Symlinks python to python3
+- **python3** - Python 3 interpreter
+- **python3-dev** - Python 3 development headers
+- **python3-pip** - Python package manager
+- **python3-setuptools** - Python packaging tools
+- **python3-venv** - Python 3 virtual environment
+- **python3-wheel** - Python wheel package format
+- **ripgrep** - Fast grep replacement optimized for code
+- **rsync** - Fast file transfer and sync utility
+- **shellcheck** - Shell script static analysis tool
+- **sqlite3** - SQLite command-line interface
+- **strace** - System call tracer for debugging
+- **sudo** - Execute commands as another user (passwordless for dev)
+- **tmux** - Terminal multiplexer
+- **tree** - Display directory tree structure
+- **unzip** - ZIP archive extraction utility
+- **vim** - Text editor
+- **wget** - Non-interactive file downloader
+- **xz-utils** - XZ compression utilities
+- **zip** - ZIP archive creation utility
+- **zsh** - Z shell with extended features
 
 Rust toolchain:
 - `rustup`

@@ -363,16 +363,6 @@ chmod +x alcatraz.core/run.sh alcatraz.core/firecracker.sh alcatraz.core/build-k
 
 See earlier sections for details on `run.sh`, `firecracker.sh`, `build-rootfs.sh`, and `build-kernel.sh`.
 
-## Legacy Code
-
-The old Go single-VM implementation is kept in `alcatraz.worker/cmd/legacy/` for reference. It's deprecated and not maintained.
-
-```bash
-cd alcatraz.worker
-make legacy
-sudo ./bin/alcatraz-legacy
-```
-
 Use a different password:
 
 ```bash

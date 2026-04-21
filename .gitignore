@@ -5,5 +5,10 @@ rootfs/
 vmlinux
 vm_config.*.json
 
+# Compiled binaries in cmd/
+cmd/*/spawn-client
+cmd/*/alcatraz-worker
+cmd/**/alcatraz-worker
+
 .DS_Store
 *.log

@@ -7,7 +7,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 
-	"firecracker-agentfs/internal/config"
+	"alcatraz.worker/internal/config"
 )
 
 type MessageHandler func(*config.VMRequest) error

@@ -15,7 +15,7 @@ import (
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
 	"github.com/google/uuid"
 
-	"firecracker-agentfs/internal/config"
+	"alcatraz.worker/internal/config"
 )
 
 type InstanceManager struct {

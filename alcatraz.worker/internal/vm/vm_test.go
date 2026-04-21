@@ -3,7 +3,7 @@ package vm
 import (
 	"testing"
 
-	"firecracker-agentfs/internal/config"
+	"alcatraz.worker/internal/config"
 )
 
 func TestFormatHostTapIP(t *testing.T) {

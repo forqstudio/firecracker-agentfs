@@ -3,6 +3,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# When sudo runs this script, it resets PATH. Add the dev user's cargo bin so
+# agentfs can be found (needed by firecracker.sh for NFS and overlay support).
+if [ "$(id -u)" = "0" ] && [ -z "${AGENTFS_BIN:-}" ]; then
+    export PATH="/home/dev/.cargo/bin:$PATH"
+    AGENTFS_BIN="$(command -v agentfs 2>/dev/null || true)"
+fi
+
+export AGENTFS_BIN
+
 ROOTFS_DIR="${ROOTFS_DIR:-${SCRIPT_DIR}/rootfs}"
 KERNEL_PATH="${KERNEL_PATH:-${SCRIPT_DIR}/linux-amazon/vmlinux}"
 AGENTFS_DIR="${SCRIPT_DIR}/.agentfs"
@@ -107,4 +116,9 @@ if [ "${ROOTFS_REBUILT}" = "1" ] && [ -f "${OVERLAY_DB}" ] && [ "${RESET_AGENTFS
 fi
 
 log "Starting Firecracker with AgentFS overlay ${AGENT_ID}"
-exec "${SCRIPT_DIR}/firecracker.sh" "${AGENT_ID}"
+
+if [ "$(id -u)" = "0" ] && [ -n "${AGENTFS_BIN:-}" ]; then
+    exec env AGENTFS_BIN="${AGENTFS_BIN}" "${SCRIPT_DIR}/firecracker.sh" "${AGENT_ID}"
+else
+    exec "${SCRIPT_DIR}/firecracker.sh" "${AGENT_ID}"
+fi

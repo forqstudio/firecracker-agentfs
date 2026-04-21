@@ -2,7 +2,7 @@
 
 This project runs a Firecracker microVM whose root filesystem is served from an AgentFS overlay over NFS.
 
-This repository contains the build and launch scripts only. Generated artifacts such as `rootfs/`, `linux-amazon/`, `.agentfs/`, `vmlinux`, and temporary `vm_config.*.json` files are intentionally excluded from version control.
+This repository contains the build and launch scripts only. Generated artifacts such as `alcatraz.core/rootfs/`, `alcatraz.core/linux-amazon/`, `alcatraz.core/.agentfs/`, `alcatraz.core/vmlinux`, and temporary `vm_config.*.json` files are intentionally excluded from version control.
 
 ## The Stack
 
@@ -203,8 +203,8 @@ Single command for first-time setup and launch:
 
 ```bash
 cd /home/dev/Workspace/firecracker-agentfs
-chmod +x run.sh build-kernel.sh build-rootfs.sh firecracker.sh
-./run.sh
+chmod +x alcatraz.core/run.sh alcatraz.core/build-kernel.sh alcatraz.core/build-rootfs.sh alcatraz.core/firecracker.sh
+./alcatraz.core/run.sh
 ```
 
 `run.sh`:
@@ -215,39 +215,40 @@ chmod +x run.sh build-kernel.sh build-rootfs.sh firecracker.sh
 After kernel config changes, force a kernel rebuild:
 
 ```bash
-./run.sh --build-kernel
+./alcatraz.core/run.sh --build-kernel
 ```
 
 After rootfs changes like SSH setup, force a rootfs rebuild too:
 
 ```bash
-RESET_AGENTFS=1 ./run.sh --build-all my-agent
+RESET_AGENTFS=1 ./alcatraz.core/run.sh --build-all my-agent
 ```
 
 If you want the explicit manual steps instead:
 
 ```bash
-cd /home/dev/workspace/firecracker-agentfs
-chmod +x build-kernel.sh build-rootfs.sh firecracker.sh
-./build-kernel.sh
-./build-rootfs.sh
+cd /home/dev/Workspace/firecracker-agentfs
+chmod +x alcatraz.core/build-kernel.sh alcatraz.core/build-rootfs.sh alcatraz.core/firecracker.sh
+./alcatraz.core/build-kernel.sh
+./alcatraz.core/build-rootfs.sh
 ```
 
 What those scripts do:
 - `build-kernel.sh` installs host build deps with `apt`, clones the Amazon Linux kernel, enables Firecracker/NFS/dev-friendly kernel options, and builds `vmlinux`
 - if `linux-amazon/` already exists and is clean, `build-kernel.sh` will switch it to the requested `KERNEL_TAG` automatically
-- `build-rootfs.sh` installs host-side bootstrap deps, recreates `./rootfs`, bootstraps Ubuntu `noble`, installs guest packages, Rust, Python tools, Pi, and guest AgentFS, then writes `/init` and guest profile files
+- `build-rootfs.sh` installs host-side bootstrap deps, recreates `alcatraz.core/rootfs`, bootstraps Ubuntu `noble`, installs guest packages, Rust, Python tools, Pi, and guest AgentFS, then writes `/init` and guest profile files
 
 ## Run
 
 ```bash
-./run.sh
-```ssh al@172.16.0.2
+./alcatraz.core/run.sh
+```
+ssh al@172.16.0.2
 
 or directly:
 
 ```bash
-./firecracker.sh
+./alcatraz.core/firecracker.sh
 ```
 
 ## alcatraz-worker (NATS-powered VM service)
@@ -265,8 +266,8 @@ The `alcatraz-worker` is a Go application that listens to NATS messages to spawn
 ### Build
 
 ```bash
-go build -o bin/alcatraz-worker ./cmd/alcatraz-worker
-go build -o bin/spawn-client ./cmd/spawn-client
+cd alcatraz.worker
+make build
 ```
 
 ### Run NATS
@@ -347,7 +348,8 @@ Default password: `dev`
 ### Tests
 
 ```bash
-go test -v ./internal/...
+cd alcatraz.worker
+make test
 ```
 
 ## Shell Script (Alternative)
@@ -355,26 +357,27 @@ go test -v ./internal/...
 The shell scripts (`run.sh`, `firecracker.sh`) can also be used to launch a single VM directly:
 
 ```bash
-chmod +x run.sh firecracker.sh build-kernel.sh build-rootfs.sh
-./run.sh
+chmod +x alcatraz.core/run.sh alcatraz.core/firecracker.sh alcatraz.core/build-kernel.sh alcatraz.core/build-rootfs.sh
+./alcatraz.core/run.sh
 ```
 
 See earlier sections for details on `run.sh`, `firecracker.sh`, `build-rootfs.sh`, and `build-kernel.sh`.
 
 ## Legacy Code
 
-The old Go single-VM implementation is kept in `cmd/legacy/` for reference. It's deprecated and not maintained.
+The old Go single-VM implementation is kept in `alcatraz.worker/cmd/legacy/` for reference. It's deprecated and not maintained.
 
 ```bash
-go build -o bin/alcatraz-legacy ./cmd/legacy
+cd alcatraz.worker
+make legacy
 sudo ./bin/alcatraz-legacy
 ```
 
 Use a different password:
 
 ```bash
-VM_USER_PASSWORD='something-better' ./build-rootfs.sh
-RESET_AGENTFS=1 ./run.sh --build-rootfs my-agent
+VM_USER_PASSWORD='something-better' ./alcatraz.core/build-rootfs.sh
+RESET_AGENTFS=1 ./alcatraz.core/run.sh --build-rootfs my-agent
 ```
 
 If host SSH public keys exist in `~/.ssh/*.pub` at rootfs build time, they are copied into the guest user's `authorized_keys`.
@@ -399,24 +402,24 @@ curl http://172.16.0.1:8010
 To change or disable that forwarding:
 
 ```bash
-HOST_LOOPBACK_PORTS=3000,5173 ./run.sh
-HOST_LOOPBACK_PORTS= ./run.sh
+HOST_LOOPBACK_PORTS=3000,5173 ./alcatraz.core/run.sh
+HOST_LOOPBACK_PORTS= ./alcatraz.core/run.sh
 ```
 
 ## Persistence Model
 
-- Base image: `./rootfs`
-- Overlay DB: `.agentfs/<agent-id>.db`
-- Base stamp: `.agentfs/<agent-id>.base-stamp`
+- Base image: `alcatraz.core/rootfs`
+- Overlay DB: `alcatraz.core/.agentfs/<agent-id>.db`
+- Base stamp: `alcatraz.core/.agentfs/<agent-id>.base-stamp`
 
-The launcher hashes `rootfs/etc/alcatraz-release` and refuses to silently reuse an overlay against a changed base rootfs. If the base image changed, either:
+The launcher hashes `alcatraz.core/rootfs/etc/alcatraz-release` and refuses to silently reuse an overlay against a changed base rootfs. If the base image changed, either:
 - use a new agent id, or
 - run with `RESET_AGENTFS=1`
 
 ## Runtime Notes
 
 - `vm_config.json` is not checked in anymore; it is generated as a temporary file at launch time.
-- If the host `firecracker` binary is missing or on the wrong version, `firecracker.sh` downloads `v1.15.1` into `./bin/`.
+- If the host `firecracker` binary is missing or on the wrong version, `firecracker.sh` downloads `v1.15.1` into `alcatraz.core/bin/`.
 - The host `agentfs` binary is not auto-installed by the launcher. Install it yourself first.
 - The launcher warns if the host `agentfs` version does not match the expected target version.
 - The guest rootfs is served from AgentFS over NFSv3.
@@ -429,23 +432,23 @@ The launcher hashes `rootfs/etc/alcatraz-release` and refuses to silently reuse 
 Build-time:
 
 ```bash
-./run.sh --build-all
-./run.sh --build-rootfs
-RESET_AGENTFS=1 ./run.sh --build-rootfs my-agent
-NODE_MAJOR=20 ./build-rootfs.sh
-RUST_TOOLCHAIN=stable ./build-rootfs.sh
-VM_USER=dev VM_USER_PASSWORD=dev VM_HOSTNAME=alcatraz ./build-rootfs.sh
-KERNEL_TAG=microvm-kernel-6.1.167-27.319.amzn2023 ./build-kernel.sh
+./alcatraz.core/run.sh --build-all
+./alcatraz.core/run.sh --build-rootfs
+RESET_AGENTFS=1 ./alcatraz.core/run.sh --build-rootfs my-agent
+NODE_MAJOR=20 ./alcatraz.core/build-rootfs.sh
+RUST_TOOLCHAIN=stable ./alcatraz.core/build-rootfs.sh
+VM_USER=dev VM_USER_PASSWORD=dev VM_HOSTNAME=alcatraz ./alcatraz.core/build-rootfs.sh
+KERNEL_TAG=microvm-kernel-6.1.167-27.319.amzn2023 ./alcatraz.core/build-kernel.sh
 ```
 
 Run-time:
 
 ```bash
-VM_VCPUS=4 VM_MEM_MIB=4096 ./firecracker.sh
-HOST_IFACE=wlp194s0 ./firecracker.sh
-TAP_DEV=fc-tap1 HOST_TAP_IP=172.16.1.1 VM_IP=172.16.1.2 VM_SUBNET=172.16.1.0/24 ./firecracker.sh
-NFS_PORT=11112 ./firecracker.sh
-GUEST_KERNEL_QUIET=1 ./firecracker.sh
+VM_VCPUS=4 VM_MEM_MIB=4096 ./alcatraz.core/firecracker.sh
+HOST_IFACE=wlp194s0 ./alcatraz.core/firecracker.sh
+TAP_DEV=fc-tap1 HOST_TAP_IP=172.16.1.1 VM_IP=172.16.1.2 VM_SUBNET=172.16.1.0/24 ./alcatraz.core/firecracker.sh
+NFS_PORT=11112 ./alcatraz.core/firecracker.sh
+GUEST_KERNEL_QUIET=1 ./alcatraz.core/firecracker.sh
 ```
 
 Available environment knobs used by the scripts:
@@ -498,4 +501,4 @@ Available environment knobs used by the scripts:
 agentfs diff <agent-id>
 ```
 
-You can also inspect the AgentFS database directly from `.agentfs/` if needed.
+You can also inspect the AgentFS database directly from `alcatraz.core/.agentfs/` if needed.

@@ -8,10 +8,10 @@ const (
 	DefaultMaxVMs     = 5
 	DefaultQueueGroup = "vm-workers"
 
-	FirecrackerBin = "./bin/firecracker-v1.15.1"
-	KernelPath     = "./linux-amazon/vmlinux"
-	RootfsPath     = "./rootfs"
-	AgentfsDir     = ".agentfs"
+FirecrackerBin = "../alcatraz.core/bin/firecracker-v1.15.1"
+	KernelPath     = "../alcatraz.core/linux-amazon/vmlinux"
+	RootfsPath    = "../alcatraz.core/rootfs"
+	AgentfsDir    = "../alcatraz.core/.agentfs"
 
 	BaseTapDev    = "fc-tap"
 	BaseHostTapIP = "172.16.0.1"

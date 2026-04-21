@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	firecrackerBin   = "./bin/firecracker-v1.15.1"
-	kernelPath       = "./linux-amazon/vmlinux"
-	rootfsPath       = "./rootfs"
-	agentfsDir       = ".agentfs"
+	firecrackerBin   = "../alcatraz.core/bin/firecracker-v1.15.1"
+	kernelPath       = "../alcatraz.core/linux-amazon/vmlinux"
+	rootfsPath       = "../alcatraz.core/rootfs"
+	agentfsDir       = "../alcatraz.core/.agentfs"
 	agentID          = "firecracker-dev"
 
 	tapDev           = "fc-tap0"

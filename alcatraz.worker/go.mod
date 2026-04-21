@@ -1,4 +1,4 @@
-module firecracker-agentfs
+module alcatraz.worker
 
 go 1.25.0
 

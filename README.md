@@ -250,69 +250,127 @@ or directly:
 ./firecracker.sh
 ```
 
-### Using alcatraz-worker (Go application)
+## alcatraz-worker (NATS-powered VM service)
 
-You can also start the VM using the alcatraz-worker Go application. Build it first:
+The `alcatraz-worker` is a Go application that listens to NATS messages to spawn Firecracker VMs dynamically. It supports multiple concurrent VMs (default: 5).
+
+### Features
+
+- Listens to NATS `vm.spawn` subject for VM requests
+- Supports multiple concurrent VMs with isolated networking
+- Auto-allocates TAP devices, IPs, and NFS ports
+- Queue-based subscription for load balancing across workers
+- Auto-cleanup on VM exit
+
+### Build
 
 ```bash
-go build -o bin/alcatraz-worker .
+go build -o bin/alcatraz-worker ./cmd/alcatraz-worker
+go build -o bin/spawn-client ./cmd/spawn-client
 ```
 
-Then run as root:
+### Run NATS
+
+```bash
+docker compose up -d
+```
+
+### Run alcatraz-worker
+
+Must run as root:
 
 ```bash
 sudo ./bin/alcatraz-worker
 ```
 
-Use a custom AgentFS overlay id:
+###CLI Flags
 
 ```bash
-./run.sh my-agent
+--nats-url string     NATS URL (default "nats://localhost:4222")
+--subject string    NATS subject (default "vm.spawn")
+--max-vms int       Max concurrent VMs (default 5)
+--queue-group      NATS queue group (default "vm-workers")
+--agentfs-bin      Path to agentfs binary
+--firecracker-bin  Path to firecracker
+--rootfs           Rootfs path
+--kernel           Kernel path
 ```
 
-or:
+### Spawn a VM
+
+Using spawn-client:
 
 ```bash
-./firecracker.sh my-agent
+./bin/spawn-client -vcpus 2 -mem 2048
+./bin/spawn-client -id my-vm -vcpus 4
 ```
 
-If the base rootfs changed and you want to recreate the overlay for an existing id:
+Or using nats CLI:
 
 ```bash
-RESET_AGENTFS=1 ./run.sh my-agent
+nats pub vm.spawn '{"vcpus": 2, "memory_mib": 2048}' --creds=none -
 ```
 
-or:
+### VM Request Schema
 
-```bash
-RESET_AGENTFS=1 ./firecracker.sh my-agent
+```json
+{
+  "id": "optional-vm-id",
+  "vcpus": 4,
+  "memory_mib": 8192,
+  "kernel_args": "quiet"
+}
 ```
 
-Stop the VM with `Ctrl+C`.
+All fields are optional. Defaults: vcpus=4, memory_mib=8192, kernel_args="loglevel=7 printk.devkmsg=on"
 
-## Connecting To The VM
+### Network Allocation
 
-Serial console:
+Each VM gets allocated:
 
-```bash
-./run.sh
-```
+| Slot | TAP Device | Host IP   | Guest IP  | NFS Port |
+|------|-----------|-----------|-----------|----------|
+| 0    | fc-tap0   | 172.16.0.1 | 172.16.0.2 | 11111  |
+| 1    | fc-tap1   | 172.16.1.1 | 172.16.1.2 | 11112  |
+| 2    | fc-tap2   | 172.16.2.1 | 172.16.2.2 | 11113  |
+| 3    | fc-tap3   | 172.16.3.1 | 172.16.3.2 | 11114  |
+| 4    | fc-tap4   | 172.16.4.1 | 172.16.4.2 | 11115  |
 
-If the guest boots successfully, you should land directly in an interactive shell as `dev` in the same terminal.
-
-SSH from the host:
+### Connect to VM
 
 ```bash
 ssh dev@172.16.0.2
 ```
 
-Default password:
+Default password: `dev`
 
-```text
-dev
+### Tests
+
+```bash
+go test -v ./cmd/alcatraz-worker/...
 ```
 
-To use a different password:
+## Shell Script (Alternative)
+
+The shell scripts (`run.sh`, `firecracker.sh`) can also be used to launch a single VM directly:
+
+```bash
+chmod +x run.sh firecracker.sh build-kernel.sh build-rootfs.sh
+./run.sh
+```
+
+See earlier sections for details on `run.sh`, `firecracker.sh`, `build-rootfs.sh`, and `build-kernel.sh`.
+
+## Legacy Code
+
+The old Go single-VM implementation is kept in `cmd/legacy/` for reference. It's deprecated and not maintained.
+
+```bash
+go build -o bin/alcatraz-legacy ./cmd/legacy
+sudo ./bin/alcatraz-legacy
+```
+
+Use a different password:
 
 ```bash
 VM_USER_PASSWORD='something-better' ./build-rootfs.sh

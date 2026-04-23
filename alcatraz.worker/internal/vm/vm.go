@@ -7,8 +7,6 @@ import (
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
-
-	"alcatraz.worker/internal/config"
 )
 
 type SpawnOptions struct {
@@ -22,7 +20,7 @@ type SpawnOptions struct {
 func Spawn(
 	context context.Context,
 	instanceManager *InstanceManager,
-	request *config.VMRequest,
+	request *Request,
 	options *SpawnOptions) (*Instance, error) {
 	index, err := instanceManager.Allocate()
 	if err != nil {
@@ -78,7 +76,7 @@ func Spawn(
 		instance.VMIP,
 		instance.HostTapIP,
 		subnetMask,
-		config.VMHostname,
+		VMHostname,
 		instance.HostTapIP,
 		instance.NFSPort,
 		instance.NFSPort,
@@ -95,7 +93,7 @@ func Spawn(
 		NetworkInterfaces: []firecracker.NetworkInterface{
 			{
 				StaticConfiguration: &firecracker.StaticNetworkConfiguration{
-					MacAddress:  config.GuestMAC,
+					MacAddress:  GuestMAC,
 					HostDevName: instance.TapDev,
 				},
 			},

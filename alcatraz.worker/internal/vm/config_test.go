@@ -1,27 +1,41 @@
-package config
+package vm
 
 import (
 	"testing"
 )
 
-func TestVMRequestValidate(t *testing.T) {
+func TestDefaultConfig(t *testing.T) {
+	cfg := DefaultConfig()
+
+	if cfg.MaxVMs != DefaultMaxVMs {
+		t.Errorf("MaxVMs = %d, want %d", cfg.MaxVMs, DefaultMaxVMs)
+	}
+	if cfg.AgentfsBin != AgentfsBin {
+		t.Errorf("AgentfsBin = %s, want %s", cfg.AgentfsBin, AgentfsBin)
+	}
+	if cfg.FirecrackerBin != FirecrackerBin {
+		t.Errorf("FirecrackerBin = %s, want %s", cfg.FirecrackerBin, FirecrackerBin)
+	}
+}
+
+func TestRequestValidate(t *testing.T) {
 	tests := []struct {
 		name      string
-		req       VMRequest
+		req       Request
 		wantID    bool
 		wantVCPUs int
 		wantMem   int
 	}{
 		{
 			name:      "empty request gets defaults",
-			req:       VMRequest{},
+			req:       Request{},
 			wantID:    true,
 			wantVCPUs: DefaultVCPUs,
 			wantMem:   DefaultMemMib,
 		},
 		{
 			name: "partial request",
-			req: VMRequest{
+			req: Request{
 				VCPUs: 8,
 			},
 			wantVCPUs: 8,
@@ -45,23 +59,6 @@ func TestVMRequestValidate(t *testing.T) {
 				t.Errorf("MemoryMib = %d, want %d", tt.req.MemoryMib, tt.wantMem)
 			}
 		})
-	}
-}
-
-func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
-
-	if cfg.NATSURL != DefaultNATSURL {
-		t.Errorf("NATSURL = %s, want %s", cfg.NATSURL, DefaultNATSURL)
-	}
-	if cfg.Subject != DefaultSubject {
-		t.Errorf("Subject = %s, want %s", cfg.Subject, DefaultSubject)
-	}
-	if cfg.MaxVMs != DefaultMaxVMs {
-		t.Errorf("MaxVMs = %d, want %d", cfg.MaxVMs, DefaultMaxVMs)
-	}
-	if cfg.QueueGroup != DefaultQueueGroup {
-		t.Errorf("QueueGroup = %s, want %s", cfg.QueueGroup, DefaultQueueGroup)
 	}
 }
 

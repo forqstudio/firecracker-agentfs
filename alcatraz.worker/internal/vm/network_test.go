@@ -2,8 +2,6 @@ package vm
 
 import (
 	"testing"
-
-	"alcatraz.worker/internal/config"
 )
 
 func TestFormatHostTapIP(t *testing.T) {
@@ -67,7 +65,7 @@ func TestFormatSubnet(t *testing.T) {
 }
 
 func TestFormatNFSPort(t *testing.T) {
-	basePort := config.BaseNFSPort
+	basePort := BaseNFSPort
 	for i := 0; i < 5; i++ {
 		got := FormatNFSPort(i)
 		want := basePort + i

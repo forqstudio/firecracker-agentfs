@@ -7,10 +7,10 @@ import (
 
 	"github.com/nats-io/nats.go"
 
-	"alcatraz.worker/internal/config"
+	"alcatraz.worker/internal/vm"
 )
 
-type MessageHandler func(*config.VMRequest) error
+type MessageHandler func(*Message) error
 
 type Subscriber struct {
 	nc         *nats.Conn
@@ -61,15 +61,15 @@ func (subscriber *Subscriber) Start() error {
 }
 
 func (subscriber *Subscriber) handleMessage(message *nats.Msg) {
-	var req config.VMRequest
-	if err := json.Unmarshal(message.Data, &req); err != nil {
+	var msg Message
+	if err := json.Unmarshal(message.Data, &msg); err != nil {
 		log.Printf("Failed to parse request: %v", err)
 		return
 	}
 
-	log.Printf("Received spawn request: %+v", req)
+	log.Printf("Received spawn request: %+v", msg)
 
-	if err := subscriber.handler(&req); err != nil {
+	if err := subscriber.handler(&msg); err != nil {
 		log.Printf("Failed to handle request: %v", err)
 	}
 }
@@ -93,4 +93,20 @@ func (subscriber *Subscriber) URL() string {
 
 func (subscriber *Subscriber) IsConnected() bool {
 	return subscriber.nc != nil && subscriber.nc.IsConnected()
+}
+
+type Message struct {
+	ID         string `json:"id,omitempty"`
+	VCPUs      int    `json:"vcpus,omitempty"`
+	MemoryMib  int    `json:"memory_mib,omitempty"`
+	KernelArgs string `json:"kernel_args,omitempty"`
+}
+
+func (m *Message) ToVMRequest() *vm.Request {
+	return &vm.Request{
+		ID:         m.ID,
+		VCPUs:      m.VCPUs,
+		MemoryMib:  m.MemoryMib,
+		KernelArgs: m.KernelArgs,
+	}
 }

@@ -8,8 +8,6 @@ import (
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/firecracker-microvm/firecracker-go-sdk/client/models"
-
-	"alcatraz.worker/internal/config"
 )
 
 type Instance struct {
@@ -112,11 +110,11 @@ func FormatSubnet(index int) string {
 }
 
 func FormatNFSPort(index int) int {
-	return config.BaseNFSPort + index
+	return BaseNFSPort + index
 }
 
 func FormatTapDev(index int) string {
-	return fmt.Sprintf("%s%d", config.BaseTapDev, index)
+	return fmt.Sprintf("%s%d", BaseTapDev, index)
 }
 
 func FormatSocket(agentfsDirectory, virtualMachineId string) string {

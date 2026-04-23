@@ -32,7 +32,7 @@ const (
 	DefaultKernelArgs = "loglevel=7 printk.devkmsg=on"
 )
 
-type Config struct {
+type VirtualMachineConfig struct {
 	MaxVMs         int
 	AgentfsBin     string
 	AgentfsData    string
@@ -41,12 +41,12 @@ type Config struct {
 	Kernel         string
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig() (*VirtualMachineConfig, error) {
 	if err := godotenv.Load(VMEnvFile); err != nil {
 		return nil, err
 	}
 
-	cfg := &Config{}
+	cfg := &VirtualMachineConfig{}
 
 	if v := os.Getenv("MAX_VMS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
@@ -72,8 +72,8 @@ func LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-func DefaultConfig() *Config {
-	return &Config{
+func DefaultConfig() *VirtualMachineConfig {
+	return &VirtualMachineConfig{
 		MaxVMs:         DefaultMaxVMs,
 		AgentfsBin:     AgentfsBin,
 		FirecrackerBin: FirecrackerBin,
@@ -83,30 +83,30 @@ func DefaultConfig() *Config {
 	}
 }
 
-type Request struct {
+type CreateVMInput struct {
 	ID         string `json:"id,omitempty"`
 	VCPUs      int    `json:"vcpus,omitempty"`
 	MemoryMib  int    `json:"memory_mib,omitempty"`
 	KernelArgs string `json:"kernel_args,omitempty"`
 }
 
-func (r *Request) WithDefaults() *Request {
-	r.Validate()
-	return r
+func (input *CreateVMInput) WithDefaults() *CreateVMInput {
+	input.Validate()
+	return input
 }
 
-func (r *Request) Validate() error {
-	if r.ID == "" {
-		r.ID = uuid.New().String()
+func (input *CreateVMInput) Validate() error {
+	if input.ID == "" {
+		input.ID = uuid.New().String()
 	}
-	if r.VCPUs <= 0 {
-		r.VCPUs = DefaultVCPUs
+	if input.VCPUs <= 0 {
+		input.VCPUs = DefaultVCPUs
 	}
-	if r.MemoryMib <= 0 {
-		r.MemoryMib = DefaultMemMib
+	if input.MemoryMib <= 0 {
+		input.MemoryMib = DefaultMemMib
 	}
-	if r.KernelArgs == "" {
-		r.KernelArgs = DefaultKernelArgs
+	if input.KernelArgs == "" {
+		input.KernelArgs = DefaultKernelArgs
 	}
 	return nil
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/nats-io/nats.go"
+	messaging "github.com/nats-io/nats.go"
 )
 
 const (
@@ -47,29 +47,29 @@ func main() {
 		mem = 0
 	}
 
-	req := VMRequest{
+	vmRequest := VMRequest{
 		ID:         vmID,
 		VCPUs:      vcpus,
 		MemoryMib:  mem,
 		KernelArgs: args,
 	}
 
-	data, err := json.Marshal(req)
+	data, err := json.Marshal(vmRequest)
 	if err != nil {
 		log.Fatalf("Failed to marshal request: %v", err)
 	}
 
-	nc, err := nats.Connect(natsURL)
+	connection, err := messaging.Connect(natsURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to NATS: %v", err)
 	}
-	defer nc.Close()
+	defer connection.Close()
 
-	if err := nc.Publish(subject, data); err != nil {
+	if err := connection.Publish(subject, data); err != nil {
 		log.Fatalf("Failed to publish: %v", err)
 	}
 
-	if err := nc.Flush(); err != nil {
+	if err := connection.Flush(); err != nil {
 		log.Fatalf("Failed to flush: %v", err)
 	}
 

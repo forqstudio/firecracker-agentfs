@@ -7,39 +7,39 @@ import (
 	"os/signal"
 	"syscall"
 
-	nats "alcatraz.worker/internal/messaging"
-	"alcatraz.worker/internal/vm"
+	messaging "alcatraz.worker/internal/messaging"
+	virtualMachine "alcatraz.worker/internal/vm"
 )
 
 func main() {
-	vmCfg, err := vm.LoadConfig()
+	vmConfig, err := virtualMachine.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load VM config: %v", err)
 	}
 
-	natsCfg, err := nats.LoadConfig()
+	natsConfig, err := messaging.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load NATS config: %v", err)
 	}
 
-	mgr := vm.NewInstanceManager(vmCfg.MaxVMs)
+	mgr := virtualMachine.NewInstanceManager(vmConfig.MaxVMs)
 
-	handler := func(msg *nats.Message) error {
-		req := msg.ToVMRequest()
-		opts := &vm.SpawnOptions{
-			AgentfsBin:     vmCfg.AgentfsBin,
-			FirecrackerBin: vmCfg.FirecrackerBin,
-			Rootfs:         vmCfg.Rootfs,
-			Kernel:         vmCfg.Kernel,
-			AgentfsData:    vmCfg.AgentfsData,
+	handler := func(message *messaging.Message) error {
+		vmRequest := message.ToVMRequest()
+		options := &virtualMachine.SpawnOptions{
+			AgentfsBin:     vmConfig.AgentfsBin,
+			FirecrackerBin: vmConfig.FirecrackerBin,
+			Rootfs:         vmConfig.Rootfs,
+			Kernel:         vmConfig.Kernel,
+			AgentfsData:    vmConfig.AgentfsData,
 		}
 
 		ctx := context.Background()
-		_, err := vm.Spawn(ctx, mgr, req, opts)
+		_, err := virtualMachine.Spawn(ctx, mgr, vmRequest, options)
 		return err
 	}
 
-	subscriber, err := nats.NewSubscriber(natsCfg.URL, natsCfg.Subject, natsCfg.QueueGroup, handler)
+	subscriber, err := messaging.NewSubscriber(natsConfig.URL, natsConfig.Subject, natsConfig.QueueGroup, handler)
 	if err != nil {
 		log.Fatalf("Failed to create subscriber: %v", err)
 	}

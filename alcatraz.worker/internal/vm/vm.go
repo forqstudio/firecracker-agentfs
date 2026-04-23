@@ -17,10 +17,55 @@ type SpawnOptions struct {
 	AgentfsData    string
 }
 
+type VMBuilder struct {
+	instance *Instance
+	options  *SpawnOptions
+}
+
+func NewVMBuilder() *VMBuilder {
+	return &VMBuilder{
+		instance: NewInstance(),
+		options:  &SpawnOptions{},
+	}
+}
+
+func (builder *VMBuilder) WithRequest(req *CreateVMInput) *VMBuilder {
+	builder.instance.id = req.ID
+	builder.instance.vcpus = req.VCPUs
+	builder.instance.memoryMib = req.MemoryMib
+	builder.instance.kernelArgs = req.KernelArgs
+	return builder
+}
+
+func (builder *VMBuilder) WithIndex(idx int) *VMBuilder {
+	builder.instance.index = idx
+	builder.instance.tapDev = fmt.Sprintf("%s%d", BaseTapDev, idx)
+	builder.instance.hostTapIP = fmt.Sprintf("172.16.%d.1", idx)
+	builder.instance.vmIP = fmt.Sprintf("172.16.%d.2", idx)
+	builder.instance.subnet = fmt.Sprintf("172.16.%d.0/24", idx)
+	builder.instance.nfsPort = BaseNFSPort + idx
+	return builder
+}
+
+func (builder *VMBuilder) WithAgentID(id string) *VMBuilder {
+	builder.instance.agentID = id
+	return builder
+}
+
+func (builder *VMBuilder) WithSpawnOptions(opts *SpawnOptions) *VMBuilder {
+	builder.options = opts
+	return builder
+}
+
+func (builder *VMBuilder) Build() *Instance {
+	builder.instance.socket = fmt.Sprintf("%s/fc-%s.sock", builder.options.AgentfsData, builder.instance.agentID)
+	return builder.instance
+}
+
 func Spawn(
 	context context.Context,
 	instanceManager *InstanceManager,
-	request *Request,
+	request *CreateVMInput,
 	options *SpawnOptions) (*Instance, error) {
 	index, err := instanceManager.Allocate()
 	if err != nil {
@@ -29,22 +74,14 @@ func Spawn(
 
 	validatedReq := request.WithDefaults()
 
-	instance := &Instance{
-		ID:         validatedReq.ID,
-		VCPUs:      validatedReq.VCPUs,
-		MemoryMib:  validatedReq.MemoryMib,
-		KernelArgs: validatedReq.KernelArgs,
-		Index:      index,
-		TapDev:     FormatTapDev(index),
-		HostTapIP:  FormatHostTapIP(index),
-		VMIP:       FormatVMIP(index),
-		Subnet:     FormatSubnet(index),
-		NFSPort:    FormatNFSPort(index),
-		Socket:     FormatSocket(options.AgentfsData, validatedReq.ID),
-		AgentID:    validatedReq.ID,
-	}
+	instance := NewVMBuilder().
+		WithRequest(validatedReq).
+		WithIndex(index).
+		WithAgentID(validatedReq.ID).
+		WithSpawnOptions(options).
+		Build()
 
-	log.Printf("Spawning VM %s (vCPUs: %d, Mem: %d MiB, idx: %d)", instance.ID, instance.VCPUs, instance.MemoryMib, index)
+	log.Printf("Spawning VM %s (vCPUs: %d, Mem: %d MiB, idx: %d)", instance.id, instance.vcpus, instance.memoryMib, index)
 
 	if err := SetupTap(instance); err != nil {
 		instanceManager.Release(index)
@@ -63,38 +100,40 @@ func Spawn(
 		return nil, fmt.Errorf("prepare agentfs: %w", err)
 	}
 
-	if err := StartAgentfsNFS(instance, options.AgentfsBin); err != nil {
+	nfsProc, err := StartAgentfsNFS(instance, options.AgentfsBin)
+	if err != nil {
 		CleanupInstance(instance)
 		instanceManager.Release(index)
 		return nil, fmt.Errorf("start agentfs nfs: %w", err)
 	}
+	instance.SetNFSProcess(nfsProc)
 
 	subnetMask := "255.255.255.0"
 	bootArgs := fmt.Sprintf(
 		"console=ttyS0 reboot=k panic=1 pci=off %s ip=%s::%s:%s:%s:eth0:off root=/dev/nfs nfsroot=%s:/,nfsvers=3,tcp,nolock,port=%d,mountport=%d rw init=/init",
-		instance.KernelArgs,
-		instance.VMIP,
-		instance.HostTapIP,
+		instance.kernelArgs,
+		instance.vmIP,
+		instance.hostTapIP,
 		subnetMask,
 		VMHostname,
-		instance.HostTapIP,
-		instance.NFSPort,
-		instance.NFSPort,
+		instance.hostTapIP,
+		instance.nfsPort,
+		instance.nfsPort,
 	)
 
 	cfg := firecracker.Config{
-		SocketPath:      instance.Socket,
+		SocketPath:      instance.socket,
 		KernelImagePath: options.Kernel,
 		KernelArgs:      bootArgs,
 		MachineCfg: models.MachineConfiguration{
-			VcpuCount:  firecracker.Int64(int64(instance.VCPUs)),
-			MemSizeMib: firecracker.Int64(int64(instance.MemoryMib)),
+			VcpuCount:  firecracker.Int64(int64(instance.vcpus)),
+			MemSizeMib: firecracker.Int64(int64(instance.memoryMib)),
 		},
 		NetworkInterfaces: []firecracker.NetworkInterface{
 			{
 				StaticConfiguration: &firecracker.StaticNetworkConfiguration{
 					MacAddress:  GuestMAC,
-					HostDevName: instance.TapDev,
+					HostDevName: instance.tapDev,
 				},
 			},
 		},
@@ -109,7 +148,7 @@ func Spawn(
 
 	cmd := firecracker.VMCommandBuilder{}.
 		WithBin(fcBinPath).
-		WithSocketPath(instance.Socket).
+		WithSocketPath(instance.socket).
 		Build(context)
 
 	m, err := firecracker.NewMachine(context, cfg, firecracker.WithProcessRunner(cmd))
@@ -119,22 +158,17 @@ func Spawn(
 		return nil, fmt.Errorf("create machine: %w", err)
 	}
 
-	instance.Machine = m
-	instance.Config = cfg
-
-	instanceManager.AddInstance(instance)
-
 	if err := m.Start(context); err != nil {
-		instanceManager.RemoveInstance(instance.ID)
+		instanceManager.RemoveInstance(instance.id)
 		CleanupInstance(instance)
 		instanceManager.Release(index)
 		return nil, fmt.Errorf("start machine: %w", err)
 	}
 
-	log.Printf("VM %s started (IP: %s)", instance.ID, instance.VMIP)
+	log.Printf("VM %s started (IP: %s)", instance.id, instance.vmIP)
 
 	go func() {
-		id := instance.ID
+		id := instance.id
 		if err := m.Wait(context); err != nil {
 			log.Printf("VM %s wait error: %v", id, err)
 		}
@@ -148,8 +182,8 @@ func Spawn(
 }
 
 func StopVM(inst *Instance) error {
-	if inst.Machine != nil {
-		return inst.Machine.StopVMM()
+	if inst.machine != nil {
+		return inst.machine.StopVMM()
 	}
 	return nil
 }

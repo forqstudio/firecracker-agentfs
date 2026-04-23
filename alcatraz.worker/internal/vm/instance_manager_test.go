@@ -12,8 +12,8 @@ func TestNewInstanceManager(t *testing.T) {
 	if mgr.maxVMs != 3 {
 		t.Errorf("expected maxVMs 3, got %d", mgr.maxVMs)
 	}
-	if len(mgr.pool) != 3 {
-		t.Errorf("expected pool size 3, got %d", len(mgr.pool))
+	if mgr.pool.Len() != 3 {
+		t.Errorf("expected pool size 3, got %d", mgr.pool.Len())
 	}
 }
 
@@ -77,7 +77,7 @@ func TestInstanceManagerRelease(t *testing.T) {
 func TestInstanceManagerAddRemove(t *testing.T) {
 	mgr := NewInstanceManager(5)
 
-	inst := &Instance{ID: "test-vm-1"}
+	inst := NewInstance(WithID("test-vm-1"))
 	mgr.AddInstance(inst)
 
 	if mgr.GetInstance("test-vm-1") == nil {

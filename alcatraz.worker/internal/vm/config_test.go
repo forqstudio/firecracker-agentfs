@@ -21,21 +21,21 @@ func TestDefaultConfig(t *testing.T) {
 func TestRequestValidate(t *testing.T) {
 	tests := []struct {
 		name      string
-		req       Request
+		req       CreateVMInput
 		wantID    bool
 		wantVCPUs int
 		wantMem   int
 	}{
 		{
 			name:      "empty request gets defaults",
-			req:       Request{},
+			req:       CreateVMInput{},
 			wantID:    true,
 			wantVCPUs: DefaultVCPUs,
 			wantMem:   DefaultMemMib,
 		},
 		{
 			name: "partial request",
-			req: Request{
+			req: CreateVMInput{
 				VCPUs: 8,
 			},
 			wantVCPUs: 8,

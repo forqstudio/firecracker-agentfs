@@ -102,8 +102,8 @@ type Message struct {
 	KernelArgs string `json:"kernel_args,omitempty"`
 }
 
-func (m *Message) ToVMRequest() *vm.Request {
-	return &vm.Request{
+func (m *Message) ToVMRequest() *vm.CreateVMInput {
+	return &vm.CreateVMInput{
 		ID:         m.ID,
 		VCPUs:      m.VCPUs,
 		MemoryMib:  m.MemoryMib,

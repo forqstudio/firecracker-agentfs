@@ -13,20 +13,20 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load()
+	configuration, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	mgr := vm.NewInstanceManager(cfg.MaxVMs)
+	mgr := vm.NewInstanceManager(configuration.MaxVMs)
 
 	handler := func(req *config.VMRequest) error {
 		opts := &vm.SpawnOptions{
-			AgentfsBin:     cfg.AgentfsBin,
-			FirecrackerBin: cfg.FirecrackerBin,
-			Rootfs:         cfg.Rootfs,
-			Kernel:         cfg.Kernel,
-			AgentfsDir:     cfg.AgentfsDir,
+			AgentfsBin:     configuration.AgentfsBin,
+			FirecrackerBin: configuration.FirecrackerBin,
+			Rootfs:         configuration.Rootfs,
+			Kernel:         configuration.Kernel,
+			AgentfsDir:     configuration.AgentfsDir,
 		}
 
 		ctx := context.Background()
@@ -34,21 +34,21 @@ func main() {
 		return err
 	}
 
-	sub, err := nats.NewSubscriber(cfg.NATSURL, cfg.Subject, cfg.QueueGroup, handler)
+	subcriber, err := nats.NewSubscriber(configuration.NATSURL, configuration.Subject, configuration.QueueGroup, handler)
 	if err != nil {
 		log.Fatalf("Failed to create subscriber: %v", err)
 	}
 
-	if err := sub.Start(); err != nil {
+	if err := subcriber.Start(); err != nil {
 		log.Fatalf("Failed to start subscriber: %v", err)
 	}
 
-	log.Printf("Alcatraz Worker started, connected to %s", sub.URL())
+	log.Printf("Alcatraz Worker started, connected to %s", subcriber.URL())
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
 
 	log.Println("Shutting down...")
-	sub.Stop()
+	subcriber.Stop()
 }

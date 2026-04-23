@@ -20,69 +20,77 @@ type Subscriber struct {
 	handler    MessageHandler
 }
 
-func NewSubscriber(url, subject, queueGroup string, handler MessageHandler) (*Subscriber, error) {
-	nc, err := nats.Connect(url)
+func NewSubscriber(
+	natsUrl,
+	natsSubject,
+	natsQueueGroup string,
+	messageHandler MessageHandler) (*Subscriber, error) {
+	natsConnection, err := nats.Connect(natsUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
 	return &Subscriber{
-		nc:         nc,
-		subject:    subject,
-		queueGroup: queueGroup,
-		handler:    handler,
+		nc:         natsConnection,
+		subject:    natsSubject,
+		queueGroup: natsQueueGroup,
+		handler:    messageHandler,
 	}, nil
 }
 
-func (s *Subscriber) Start() error {
-	ch := make(chan *nats.Msg, 64)
-	sub, err := s.nc.ChanQueueSubscribe(s.subject, s.queueGroup, ch)
+func (subscriber *Subscriber) Start() error {
+	channel := make(chan *nats.Msg, 64)
+	sub, err := subscriber.nc.ChanQueueSubscribe(
+		subscriber.subject,
+		subscriber.queueGroup,
+		channel)
+
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)
 	}
-	s.sub = sub
+	subscriber.sub = sub
 
 	go func() {
-		for msg := range ch {
-			s.handleMessage(msg)
+		for msg := range channel {
+			subscriber.handleMessage(msg)
 		}
 	}()
 
-	log.Printf("Subscribed to %s (queue: %s)", s.subject, s.queueGroup)
+	log.Printf("Subscribed to %s (queue: %s)", subscriber.subject, subscriber.queueGroup)
 	return nil
 }
 
-func (s *Subscriber) handleMessage(msg *nats.Msg) {
+func (subscriber *Subscriber) handleMessage(message *nats.Msg) {
 	var req config.VMRequest
-	if err := json.Unmarshal(msg.Data, &req); err != nil {
+	if err := json.Unmarshal(message.Data, &req); err != nil {
 		log.Printf("Failed to parse request: %v", err)
 		return
 	}
 
 	log.Printf("Received spawn request: %+v", req)
 
-	if err := s.handler(&req); err != nil {
+	if err := subscriber.handler(&req); err != nil {
 		log.Printf("Failed to handle request: %v", err)
 	}
 }
 
-func (s *Subscriber) Stop() error {
-	if s.sub != nil {
-		s.sub.Unsubscribe()
+func (subscriber *Subscriber) Stop() error {
+	if subscriber.sub != nil {
+		subscriber.sub.Unsubscribe()
 	}
-	if s.nc != nil {
-		s.nc.Drain()
+	if subscriber.nc != nil {
+		subscriber.nc.Drain()
 	}
 	return nil
 }
 
-func (s *Subscriber) URL() string {
-	if s.nc != nil {
-		return s.nc.ConnectedUrl()
+func (subscriber *Subscriber) URL() string {
+	if subscriber.nc != nil {
+		return subscriber.nc.ConnectedUrl()
 	}
 	return ""
 }
 
-func (s *Subscriber) IsConnected() bool {
-	return s.nc != nil && s.nc.IsConnected()
+func (subscriber *Subscriber) IsConnected() bool {
+	return subscriber.nc != nil && subscriber.nc.IsConnected()
 }

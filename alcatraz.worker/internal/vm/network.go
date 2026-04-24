@@ -115,6 +115,7 @@ func GetHostIface() (string, error) {
 	cmd := exec.Command("ip", "route", "show", "default")
 	out, err := cmd.Output()
 	if err != nil {
+		fmt.Printf("GetHostIface: command failed, returning error: %v\n", err)
 		return "", err
 	}
 
@@ -124,9 +125,11 @@ func GetHostIface() (string, error) {
 			continue
 		}
 		if !strings.HasPrefix(f, "-") && !strings.HasPrefix(f, "default") {
+			fmt.Printf("GetHostIface: found interface %q in route output\n", f)
 			return f, nil
 		}
 	}
 
+	fmt.Printf("GetHostIface: no valid interface found, returning fallback eth0\n")
 	return "eth0", nil
 }

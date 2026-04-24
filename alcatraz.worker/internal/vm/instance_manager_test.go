@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewInstanceManager(t *testing.T) {
-	mgr := NewInstanceManager(3)
+	mgr := NewVirtualMachineService(3)
 	if mgr == nil {
 		t.Fatal("NewInstanceManager returned nil")
 	}
@@ -18,27 +18,27 @@ func TestNewInstanceManager(t *testing.T) {
 }
 
 func TestInstanceManagerAllocate(t *testing.T) {
-	mgr := NewInstanceManager(3)
+	mgr := NewVirtualMachineService(3)
 
-	idx, err := mgr.Allocate()
+	firstIndex, err := mgr.Allocate()
 	if err != nil {
 		t.Fatalf("Allocate failed: %v", err)
 	}
-	if idx < 0 || idx >= 3 {
-		t.Errorf("expected index 0-2, got %d", idx)
+	if firstIndex < 0 || firstIndex >= 3 {
+		t.Errorf("expected index 0-2, got %d", firstIndex)
 	}
 
-	idx2, err := mgr.Allocate()
+	secondIndex, err := mgr.Allocate()
 	if err != nil {
 		t.Fatalf("Allocate failed: %v", err)
 	}
-	if idx2 == idx {
-		t.Errorf("expected different index, got %d", idx2)
+	if secondIndex == firstIndex {
+		t.Errorf("expected different index, got %d", secondIndex)
 	}
 }
 
 func TestInstanceManagerAllocateExhausted(t *testing.T) {
-	mgr := NewInstanceManager(2)
+	mgr := NewVirtualMachineService(2)
 
 	_, err := mgr.Allocate()
 	if err != nil {
@@ -56,36 +56,36 @@ func TestInstanceManagerAllocateExhausted(t *testing.T) {
 }
 
 func TestInstanceManagerRelease(t *testing.T) {
-	mgr := NewInstanceManager(2)
+	mgr := NewVirtualMachineService(2)
 
-	idx1, _ := mgr.Allocate()
-	if idx1 != 0 {
-		t.Errorf("expected first allocation to be 0, got %d", idx1)
+	firstIndex, _ := mgr.Allocate()
+	if firstIndex != 0 {
+		t.Errorf("expected first allocation to be 0, got %d", firstIndex)
 	}
 
-	mgr.Release(idx1)
+	mgr.Release(firstIndex)
 
-	idx2, err := mgr.Allocate()
+	secondIndex, err := mgr.Allocate()
 	if err != nil {
 		t.Fatalf("Allocate after release failed: %v", err)
 	}
-	if idx2 != 1 {
-		t.Errorf("expected second allocation to be 1, got %d", idx2)
+	if secondIndex != 1 {
+		t.Errorf("expected second allocation to be 1, got %d", secondIndex)
 	}
 }
 
 func TestInstanceManagerAddRemove(t *testing.T) {
-	mgr := NewInstanceManager(5)
+	mgr := NewVirtualMachineService(5)
 
-	inst := NewInstance(WithID("test-vm-1"))
-	mgr.AddInstance(inst)
+	inst := NewVirtualMachine(WithID("test-vm-1"))
+	mgr.AddVirtualMachine(inst)
 
-	if mgr.GetInstance("test-vm-1") == nil {
+	if mgr.GetVirtualMachine("test-vm-1") == nil {
 		t.Error("expected to find instance after AddInstance")
 	}
 
-	mgr.RemoveInstance("test-vm-1")
-	if mgr.GetInstance("test-vm-1") != nil {
+	mgr.RemoveVirtualMachine("test-vm-1")
+	if mgr.GetVirtualMachine("test-vm-1") != nil {
 		t.Error("expected instance to be nil after RemoveInstance")
 	}
 }

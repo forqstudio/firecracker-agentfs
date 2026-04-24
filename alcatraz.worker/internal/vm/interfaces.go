@@ -1,6 +1,6 @@
 package vm
 
-type InstanceInfo interface {
+type VirtualMachineInfo interface {
 	GetTapDev() string
 	GetHostTapIP() string
 	GetVMIP() string

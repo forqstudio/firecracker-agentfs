@@ -10,17 +10,17 @@ import (
 )
 
 const (
-	defaultNATSURL = "nats://localhost:4222"
+	defaultURL     = "nats://localhost:4222"
 	defaultSubject = "vm.spawn"
 )
 
 var (
-	natsURL string
-	subject string
-	vmID    string
-	vcpus   int
-	mem     int
-	args    string
+	natsURL          string
+	natsSubject      string
+	virtualMachineId string
+	vcpus            int
+	memory           int
+	kernelArgs       string
 )
 
 type VMRequest struct {
@@ -31,27 +31,27 @@ type VMRequest struct {
 }
 
 func main() {
-	flag.StringVar(&natsURL, "nats-url", defaultNATSURL, "NATS server URL")
-	flag.StringVar(&subject, "subject", defaultSubject, "NATS subject to publish to")
-	flag.StringVar(&vmID, "id", "", "VM ID (auto-generated if omitted)")
+	flag.StringVar(&natsURL, "nats-url", defaultURL, "NATS server URL")
+	flag.StringVar(&natsSubject, "subject", defaultSubject, "NATS subject to publish to")
+	flag.StringVar(&virtualMachineId, "id", "", "VM ID (auto-generated if omitted)")
 	flag.IntVar(&vcpus, "vcpus", 0, "vCPU count (default: 4)")
-	flag.IntVar(&mem, "mem", 0, "Memory in MiB (default: 8192)")
-	flag.StringVar(&args, "kernel-args", "", "Kernel boot args")
+	flag.IntVar(&memory, "mem", 0, "Memory in MiB (default: 8192)")
+	flag.StringVar(&kernelArgs, "kernel-args", "", "Kernel boot args")
 
 	flag.Parse()
 
 	if vcpus < 0 {
 		vcpus = 0
 	}
-	if mem < 0 {
-		mem = 0
+	if memory < 0 {
+		memory = 0
 	}
 
 	vmRequest := VMRequest{
-		ID:         vmID,
+		ID:         virtualMachineId,
 		VCPUs:      vcpus,
-		MemoryMib:  mem,
-		KernelArgs: args,
+		MemoryMib:  memory,
+		KernelArgs: kernelArgs,
 	}
 
 	data, err := json.Marshal(vmRequest)
@@ -65,7 +65,7 @@ func main() {
 	}
 	defer connection.Close()
 
-	if err := connection.Publish(subject, data); err != nil {
+	if err := connection.Publish(natsSubject, data); err != nil {
 		log.Fatalf("Failed to publish: %v", err)
 	}
 
@@ -73,5 +73,5 @@ func main() {
 		log.Fatalf("Failed to flush: %v", err)
 	}
 
-	fmt.Printf("Published spawn request to %s: %s\n", subject, string(data))
+	fmt.Printf("Published spawn request to %s: %s\n", natsSubject, string(data))
 }

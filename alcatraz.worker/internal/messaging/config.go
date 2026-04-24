@@ -9,7 +9,7 @@ import (
 const EnvFile = ".env"
 
 const (
-	DefaultNATSURL    = "nats://localhost:4222"
+	DefaultURL        = "nats://localhost:4222"
 	DefaultSubject    = "vm.spawn"
 	DefaultQueueGroup = "vm-workers"
 )
@@ -42,7 +42,7 @@ func LoadConfig() (*Config, error) {
 
 func DefaultConfig() *Config {
 	return &Config{
-		URL:        DefaultNATSURL,
+		URL:        DefaultURL,
 		Subject:    DefaultSubject,
 		QueueGroup: DefaultQueueGroup,
 	}

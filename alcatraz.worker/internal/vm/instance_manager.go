@@ -7,7 +7,7 @@ import (
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 )
 
-type Instance struct {
+type VirtualMachine struct {
 	id         string
 	vcpus      int
 	memoryMib  int
@@ -28,96 +28,98 @@ type Instance struct {
 	mu sync.Mutex
 }
 
-func NewInstance(options ...InstanceOption) *Instance {
-	inst := &Instance{}
-	for _, opt := range options {
-		opt(inst)
+func NewVirtualMachine(options ...VirtualMachineOption) *VirtualMachine {
+	virtualMachine := &VirtualMachine{}
+	for _, option := range options {
+		option(virtualMachine)
 	}
-	return inst
+	return virtualMachine
 }
 
-type InstanceOption func(*Instance)
+type VirtualMachineOption func(*VirtualMachine)
 
-func WithID(id string) InstanceOption {
-	return func(i *Instance) {
-		i.id = id
-		i.agentID = id
-	}
-}
-
-func WithVCPUs(vcpus int) InstanceOption {
-	return func(i *Instance) {
-		i.vcpus = vcpus
+func WithID(id string) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.id = id
+		virtualMachine.agentID = id
 	}
 }
 
-func WithMemory(mib int) InstanceOption {
-	return func(i *Instance) {
-		i.memoryMib = mib
+func WithVCPUs(vcpus int) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.vcpus = vcpus
 	}
 }
 
-func WithKernelArgs(args string) InstanceOption {
-	return func(i *Instance) {
-		i.kernelArgs = args
+func WithMemory(mib int) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.memoryMib = mib
 	}
 }
 
-func WithIndex(index int) InstanceOption {
-	return func(vmInstance *Instance) {
-		vmInstance.index = index
-		vmInstance.tapDev = fmt.Sprintf("%s%d", BaseTapDev, index)
-		vmInstance.hostTapIP = fmt.Sprintf("172.16.%d.1", index)
-		vmInstance.vmIP = fmt.Sprintf("172.16.%d.2", index)
-		vmInstance.subnet = fmt.Sprintf("172.16.%d.0/24", index)
-		vmInstance.nfsPort = BaseNFSPort + index
+func WithKernelArgs(args string) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.kernelArgs = args
 	}
 }
 
-func WithSocket(socket string) InstanceOption {
-	return func(i *Instance) {
-		i.socket = socket
+func WithIndex(index int, formatters *Formatters) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.index = index
+		virtualMachine.tapDev = formatters.TapDev.Format(index)
+		virtualMachine.hostTapIP = formatters.HostTapIP.Format(index)
+		virtualMachine.vmIP = formatters.VMIP.Format(index)
+		virtualMachine.subnet = formatters.Subnet.Format(index)
+		virtualMachine.nfsPort = formatters.NFS.Format(index)
 	}
 }
 
-func WithMachine(machine *firecracker.Machine) InstanceOption {
-	return func(vmInstance *Instance) {
-		vmInstance.machine = machine
+func WithSocket(socket string) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.socket = socket
 	}
 }
 
-func WithNFSProcess(process NFSProcess) InstanceOption {
-	return func(vmInstance *Instance) {
-		vmInstance.nfsProc = process
+func WithMachine(machine *firecracker.Machine) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.machine = machine
 	}
 }
 
-func (vmInstance *Instance) GetID() string                    { return vmInstance.id }
-func (vmInstance *Instance) GetVCPUs() int                    { return vmInstance.vcpus }
-func (vmInstance *Instance) GetMemoryMib() int                { return vmInstance.memoryMib }
-func (vmInstance *Instance) GetKernelArgs() string            { return vmInstance.kernelArgs }
-func (vmInstance *Instance) GetIndex() int                    { return vmInstance.index }
-func (vmInstance *Instance) GetTapDev() string                { return vmInstance.tapDev }
-func (vmInstance *Instance) GetHostTapIP() string             { return vmInstance.hostTapIP }
-func (vmInstance *Instance) GetVMIP() string                  { return vmInstance.vmIP }
-func (vmInstance *Instance) GetSubnet() string                { return vmInstance.subnet }
-func (vmInstance *Instance) GetNFSPort() int                  { return vmInstance.nfsPort }
-func (vmInstance *Instance) GetSocket() string                { return vmInstance.socket }
-func (vmInstance *Instance) GetAgentID() string               { return vmInstance.agentID }
-func (vmInstance *Instance) GetMachine() *firecracker.Machine { return vmInstance.machine }
-func (vmInstance *Instance) GetNFSProcess() NFSProcess        { return vmInstance.nfsProc }
-
-func (vmInstance *Instance) SetNFSProcess(proc NFSProcess) {
-	vmInstance.mu.Lock()
-	defer vmInstance.mu.Unlock()
-	vmInstance.nfsProc = proc
+func WithNFSProcess(process NFSProcess) VirtualMachineOption {
+	return func(virtualMachine *VirtualMachine) {
+		virtualMachine.nfsProc = process
+	}
 }
 
-type InstanceManager struct {
-	mu        sync.Mutex
-	instances map[string]*Instance
-	pool      IntPool
-	maxVMs    int
+func (virtualMachine *VirtualMachine) GetID() string         { return virtualMachine.id }
+func (virtualMachine *VirtualMachine) GetVCPUs() int         { return virtualMachine.vcpus }
+func (virtualMachine *VirtualMachine) GetMemoryMib() int     { return virtualMachine.memoryMib }
+func (virtualMachine *VirtualMachine) GetKernelArgs() string { return virtualMachine.kernelArgs }
+func (virtualMachine *VirtualMachine) GetIndex() int         { return virtualMachine.index }
+func (virtualMachine *VirtualMachine) GetTapDev() string     { return virtualMachine.tapDev }
+func (virtualMachine *VirtualMachine) GetHostTapIP() string  { return virtualMachine.hostTapIP }
+func (virtualMachine *VirtualMachine) GetVMIP() string       { return virtualMachine.vmIP }
+func (virtualMachine *VirtualMachine) GetSubnet() string     { return virtualMachine.subnet }
+func (virtualMachine *VirtualMachine) GetNFSPort() int       { return virtualMachine.nfsPort }
+func (virtualMachine *VirtualMachine) GetSocket() string     { return virtualMachine.socket }
+func (virtualMachine *VirtualMachine) GetAgentID() string    { return virtualMachine.agentID }
+func (virtualMachine *VirtualMachine) GetMachine() *firecracker.Machine {
+	return virtualMachine.machine
+}
+func (virtualMachine *VirtualMachine) GetNFSProcess() NFSProcess { return virtualMachine.nfsProc }
+
+func (virtualMachine *VirtualMachine) SetNFSProcess(proc NFSProcess) {
+	virtualMachine.mu.Lock()
+	defer virtualMachine.mu.Unlock()
+	virtualMachine.nfsProc = proc
+}
+
+type VirtualMachineService struct {
+	mu              sync.Mutex
+	virtualMachines map[string]*VirtualMachine
+	pool            IntPool
+	maxVMs          int
 }
 
 type IntPool struct {
@@ -133,77 +135,77 @@ func NewIntPool(maxSize int) IntPool {
 	return IntPool{items: pool}
 }
 
-func (p *IntPool) Len() int {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return len(p.items)
+func (pool *IntPool) Len() int {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	return len(pool.items)
 }
 
-func (p *IntPool) Allocate() (int, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if len(p.items) == 0 {
+func (pool *IntPool) Allocate() (int, error) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	if len(pool.items) == 0 {
 		return 0, fmt.Errorf("no available slots")
 	}
-	idx := p.items[0]
-	p.items = p.items[1:]
-	return idx, nil
+	index := pool.items[0]
+	pool.items = pool.items[1:]
+	return index, nil
 }
 
-func (p *IntPool) Release(idx int) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.items = append(p.items, idx)
+func (pool *IntPool) Release(index int) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.items = append(pool.items, index)
 }
 
-func NewInstanceManager(maxVMs int) *InstanceManager {
-	return &InstanceManager{
-		instances: make(map[string]*Instance),
-		pool:      NewIntPool(maxVMs),
-		maxVMs:    maxVMs,
+func NewVirtualMachineService(maxVMs int) *VirtualMachineService {
+	return &VirtualMachineService{
+		virtualMachines: make(map[string]*VirtualMachine),
+		pool:            NewIntPool(maxVMs),
+		maxVMs:          maxVMs,
 	}
 }
 
-func (instanceManager *InstanceManager) Allocate() (int, error) {
-	instanceManager.mu.Lock()
-	defer instanceManager.mu.Unlock()
-	if len(instanceManager.pool.items) == 0 {
-		return 0, fmt.Errorf("no available VM slots (max %d)", instanceManager.maxVMs)
+func (virtualMachineService *VirtualMachineService) Allocate() (int, error) {
+	virtualMachineService.mu.Lock()
+	defer virtualMachineService.mu.Unlock()
+	if len(virtualMachineService.pool.items) == 0 {
+		return 0, fmt.Errorf("no available VM slots (max %d)", virtualMachineService.maxVMs)
 	}
-	idx := instanceManager.pool.items[0]
-	instanceManager.pool.items = instanceManager.pool.items[1:]
-	return idx, nil
+	index := virtualMachineService.pool.items[0]
+	virtualMachineService.pool.items = virtualMachineService.pool.items[1:]
+	return index, nil
 }
 
-func (instanceManager *InstanceManager) Release(idx int) {
-	instanceManager.mu.Lock()
-	defer instanceManager.mu.Unlock()
-	instanceManager.pool.items = append(instanceManager.pool.items, idx)
+func (virtualMachineService *VirtualMachineService) Release(index int) {
+	virtualMachineService.mu.Lock()
+	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.pool.items = append(virtualMachineService.pool.items, index)
 }
 
-func (instanceManager *InstanceManager) AddInstance(inst *Instance) {
-	instanceManager.mu.Lock()
-	defer instanceManager.mu.Unlock()
-	instanceManager.instances[inst.id] = inst
+func (virtualMachineService *VirtualMachineService) AddVirtualMachine(virtualMachine *VirtualMachine) {
+	virtualMachineService.mu.Lock()
+	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.virtualMachines[virtualMachine.id] = virtualMachine
 }
 
-func (instanceManager *InstanceManager) RemoveInstance(id string) {
-	instanceManager.mu.Lock()
-	defer instanceManager.mu.Unlock()
-	delete(instanceManager.instances, id)
+func (virtualMachineService *VirtualMachineService) RemoveVirtualMachine(id string) {
+	virtualMachineService.mu.Lock()
+	defer virtualMachineService.mu.Unlock()
+	delete(virtualMachineService.virtualMachines, id)
 }
 
-func (instanceManager *InstanceManager) GetInstance(id string) *Instance {
-	instanceManager.mu.Lock()
-	defer instanceManager.mu.Unlock()
-	return instanceManager.instances[id]
+func (virtualMachineService *VirtualMachineService) GetVirtualMachine(id string) *VirtualMachine {
+	virtualMachineService.mu.Lock()
+	defer virtualMachineService.mu.Unlock()
+	return virtualMachineService.virtualMachines[id]
 }
 
-func (instanceManager *InstanceManager) ListInstances() []*Instance {
-	instanceManager.mu.Lock()
-	defer instanceManager.mu.Unlock()
-	instances := make([]*Instance, 0, len(instanceManager.instances))
-	for _, inst := range instanceManager.instances {
+func (virtualMachineService *VirtualMachineService) ListVirtualMachines() []*VirtualMachine {
+	virtualMachineService.mu.Lock()
+	defer virtualMachineService.mu.Unlock()
+	instances := make([]*VirtualMachine, 0, len(virtualMachineService.virtualMachines))
+	for _, inst := range virtualMachineService.virtualMachines {
 		instances = append(instances, inst)
 	}
 	return instances

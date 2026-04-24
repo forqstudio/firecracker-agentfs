@@ -6,7 +6,7 @@ import (
 
 func TestFormatHostTapIP(t *testing.T) {
 	tests := []struct {
-		idx    int
+		index  int
 		wantIP string
 	}{
 		{0, "172.16.0.1"},
@@ -14,11 +14,12 @@ func TestFormatHostTapIP(t *testing.T) {
 		{5, "172.16.5.1"},
 	}
 
+	formatter := HostTapIPFormatter{}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			got := FormatHostTapIP(tt.idx)
+			got := formatter.Format(tt.index)
 			if got != tt.wantIP {
-				t.Errorf("FormatHostTapIP(%d) = %s, want %s", tt.idx, got, tt.wantIP)
+				t.Errorf("FormatHostTapIP(%d) = %s, want %s", tt.index, got, tt.wantIP)
 			}
 		})
 	}
@@ -26,7 +27,7 @@ func TestFormatHostTapIP(t *testing.T) {
 
 func TestFormatVMIP(t *testing.T) {
 	tests := []struct {
-		idx    int
+		index  int
 		wantIP string
 	}{
 		{0, "172.16.0.2"},
@@ -34,11 +35,12 @@ func TestFormatVMIP(t *testing.T) {
 		{5, "172.16.5.2"},
 	}
 
+	formatter := IPFormatter{}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			got := FormatVMIP(tt.idx)
+			got := formatter.Format(tt.index)
 			if got != tt.wantIP {
-				t.Errorf("FormatVMIP(%d) = %s, want %s", tt.idx, got, tt.wantIP)
+				t.Errorf("FormatVMIP(%d) = %s, want %s", tt.index, got, tt.wantIP)
 			}
 		})
 	}
@@ -46,29 +48,30 @@ func TestFormatVMIP(t *testing.T) {
 
 func TestFormatSubnet(t *testing.T) {
 	tests := []struct {
-		idx  int
-		want string
+		index int
+		want  string
 	}{
 		{0, "172.16.0.0/24"},
 		{1, "172.16.1.0/24"},
 		{10, "172.16.10.0/24"},
 	}
 
+	formatter := SubnetFormatter{}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			got := FormatSubnet(tt.idx)
+			got := formatter.Format(tt.index)
 			if got != tt.want {
-				t.Errorf("FormatSubnet(%d) = %s, want %s", tt.idx, got, tt.want)
+				t.Errorf("FormatSubnet(%d) = %s, want %s", tt.index, got, tt.want)
 			}
 		})
 	}
 }
 
 func TestFormatNFSPort(t *testing.T) {
-	basePort := BaseNFSPort
+	formatter := NFSPortFormatter{BasePort: BaseNFSPort}
 	for i := 0; i < 5; i++ {
-		got := FormatNFSPort(i)
-		want := basePort + i
+		got := formatter.Format(i)
+		want := BaseNFSPort + i
 		if got != want {
 			t.Errorf("FormatNFSPort(%d) = %d, want %d", i, got, want)
 		}
@@ -76,8 +79,9 @@ func TestFormatNFSPort(t *testing.T) {
 }
 
 func TestFormatTapDev(t *testing.T) {
+	formatter := TapDevFormatter{Prefix: BaseTapDev}
 	for i := 0; i < 5; i++ {
-		got := FormatTapDev(i)
+		got := formatter.Format(i)
 		want := "fc-tap" + string(rune('0'+i))
 		if i > 9 {
 			want = "fc-tap" + string(rune('0'+i/10)) + string(rune('0'+i%10))

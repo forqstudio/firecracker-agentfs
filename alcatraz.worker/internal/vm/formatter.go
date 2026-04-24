@@ -47,27 +47,3 @@ type SocketFormatter struct {
 func (s SocketFormatter) Format(agentID string) string {
 	return fmt.Sprintf("%s/fc-%s.sock", s.AgentfsDirectory, agentID)
 }
-
-func FormatHostTapIP(index int) string {
-	return fmt.Sprintf("172.16.%d.1", index)
-}
-
-func FormatVMIP(index int) string {
-	return fmt.Sprintf("172.16.%d.2", index)
-}
-
-func FormatSubnet(index int) string {
-	return fmt.Sprintf("172.16.%d.0/24", index)
-}
-
-func FormatNFSPort(index int) int {
-	return BaseNFSPort + index
-}
-
-func FormatTapDev(index int) string {
-	return fmt.Sprintf("%s%d", BaseTapDev, index)
-}
-
-func FormatSocket(agentfsDirectory, virtualMachineId string) string {
-	return fmt.Sprintf("%s/fc-%s.sock", agentfsDirectory, virtualMachineId)
-}

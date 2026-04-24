@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const VMEnvFile = ".env"
+const EnvFile = ".env"
 
 const (
 	DefaultMaxVMs = 5
@@ -42,7 +42,7 @@ type VirtualMachineConfig struct {
 }
 
 func LoadConfig() (*VirtualMachineConfig, error) {
-	if err := godotenv.Load(VMEnvFile); err != nil {
+	if err := godotenv.Load(EnvFile); err != nil {
 		return nil, err
 	}
 
@@ -83,19 +83,41 @@ func DefaultConfig() *VirtualMachineConfig {
 	}
 }
 
-type CreateVMInput struct {
+type Formatters struct {
+	TapDev    TapDevFormatter
+	NFS       NFSPortFormatter
+	Socket    SocketFormatter
+	HostTapIP HostTapIPFormatter
+	VMIP      IPFormatter
+	Subnet    SubnetFormatter
+}
+
+func NewFormatters(cfg *VirtualMachineConfig) *Formatters {
+	return &Formatters{
+		TapDev:    TapDevFormatter{Prefix: BaseTapDev},
+		NFS:       NFSPortFormatter{BasePort: BaseNFSPort},
+		Socket:    SocketFormatter{AgentfsDirectory: cfg.AgentfsData},
+		HostTapIP: HostTapIPFormatter{},
+		VMIP:      IPFormatter{},
+		Subnet:    SubnetFormatter{},
+	}
+}
+
+var DefaultFormatters = NewFormatters(DefaultConfig())
+
+type CreateVirtualMachineInput struct {
 	ID         string `json:"id,omitempty"`
 	VCPUs      int    `json:"vcpus,omitempty"`
 	MemoryMib  int    `json:"memory_mib,omitempty"`
 	KernelArgs string `json:"kernel_args,omitempty"`
 }
 
-func (input *CreateVMInput) WithDefaults() *CreateVMInput {
+func (input *CreateVirtualMachineInput) WithDefaults() *CreateVirtualMachineInput {
 	input.Validate()
 	return input
 }
 
-func (input *CreateVMInput) Validate() error {
+func (input *CreateVirtualMachineInput) Validate() error {
 	if input.ID == "" {
 		input.ID = uuid.New().String()
 	}

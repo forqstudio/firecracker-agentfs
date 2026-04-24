@@ -121,7 +121,7 @@ func NewAgentfsService(opts ...AgentfsOption) *AgentfsService {
 	}
 }
 
-func (s *AgentfsService) PrepareOverlay(instance InstanceInfo, cfg *AgentfsConfig) error {
+func (agentfsService *AgentfsService) PrepareOverlay(instance VirtualMachineInfo, cfg *AgentfsConfig) error {
 	os.MkdirAll(cfg.DataDir, 0755)
 
 	dbPath := filepath.Join(cfg.DataDir, instance.GetAgentID()+".db")
@@ -153,7 +153,7 @@ func (s *AgentfsService) PrepareOverlay(instance InstanceInfo, cfg *AgentfsConfi
 
 	if needsInit {
 		log.Printf("Initializing AgentFS overlay for %s", instance.GetAgentID())
-		if err := s.initializer.Init(cfg.Bin, cfg.RootfsPath, instance.GetAgentID()); err != nil {
+		if err := agentfsService.initializer.Init(cfg.Bin, cfg.RootfsPath, instance.GetAgentID()); err != nil {
 			return fmt.Errorf("failed to init agentfs: %w", err)
 		}
 	}
@@ -165,19 +165,19 @@ func (s *AgentfsService) PrepareOverlay(instance InstanceInfo, cfg *AgentfsConfi
 	return nil
 }
 
-func (s *AgentfsService) StartNFS(
-	instanceInfo InstanceInfo,
+func (agentfsService *AgentfsService) StartNFS(
+	virtualMachineInfo VirtualMachineInfo,
 	agentfsConfig *AgentfsConfig) (NFSProcess, error) {
-	log.Printf("Starting AgentFS NFS on %s:%d", instanceInfo.GetHostTapIP(), instanceInfo.GetNFSPort())
+	log.Printf("Starting AgentFS NFS on %s:%d", virtualMachineInfo.GetHostTapIP(), virtualMachineInfo.GetNFSPort())
 
-	exec.Command("pkill", "-f", fmt.Sprintf("agentfs serve nfs --bind %s --port %d", instanceInfo.GetHostTapIP(), instanceInfo.GetNFSPort())).Run()
+	exec.Command("pkill", "-f", fmt.Sprintf("agentfs serve nfs --bind %s --port %d", virtualMachineInfo.GetHostTapIP(), virtualMachineInfo.GetNFSPort())).Run()
 	time.Sleep(500 * time.Millisecond)
 
-	proc, err := s.server.Start(
+	proc, err := agentfsService.server.Start(
 		agentfsConfig.Bin,
-		instanceInfo.GetHostTapIP(),
-		instanceInfo.GetNFSPort(),
-		instanceInfo.GetAgentID())
+		virtualMachineInfo.GetHostTapIP(),
+		virtualMachineInfo.GetNFSPort(),
+		virtualMachineInfo.GetAgentID())
 	if err != nil {
 		return nil, err
 	}
@@ -192,11 +192,15 @@ func (s *AgentfsService) StartNFS(
 		}
 	}
 
-	return s.server.Start(agentfsConfig.Bin, instanceInfo.GetHostTapIP(), instanceInfo.GetNFSPort(), instanceInfo.GetAgentID())
+	return agentfsService.server.Start(
+		agentfsConfig.Bin,
+		virtualMachineInfo.GetHostTapIP(),
+		virtualMachineInfo.GetNFSPort(),
+		virtualMachineInfo.GetAgentID())
 }
 
 func PrepareAgentfsOverlay(
-	instance InstanceInfo,
+	instance VirtualMachineInfo,
 	agentfsBin,
 	rootfsPath,
 	agentfsDir string) error {
@@ -247,14 +251,22 @@ func PrepareAgentfsOverlay(
 }
 
 func StartAgentfsNFS(
-	instanceInfo InstanceInfo,
+	instanceInfo VirtualMachineInfo,
 	agentfsBin string) (NFSProcess, error) {
 	log.Printf("Starting AgentFS NFS on %s:%d", instanceInfo.GetHostTapIP(), instanceInfo.GetNFSPort())
 
 	exec.Command("pkill", "-f", fmt.Sprintf("agentfs serve nfs --bind %s --port %d", instanceInfo.GetHostTapIP(), instanceInfo.GetNFSPort())).Run()
 	time.Sleep(500 * time.Millisecond)
 
-	cmd := exec.Command(agentfsBin, "serve", "nfs", "--bind", instanceInfo.GetHostTapIP(), "--port", fmt.Sprintf("%d", instanceInfo.GetNFSPort()), instanceInfo.GetAgentID())
+	cmd := exec.Command(
+		agentfsBin,
+		"serve",
+		"nfs",
+		"--bind",
+		instanceInfo.GetHostTapIP(),
+		"--port",
+		fmt.Sprintf("%d", instanceInfo.GetNFSPort()),
+		instanceInfo.GetAgentID())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
@@ -269,7 +281,15 @@ func StartAgentfsNFS(
 		}
 	}
 
-	cmd = exec.Command(agentfsBin, "serve", "nfs", "--bind", instanceInfo.GetHostTapIP(), "--port", fmt.Sprintf("%d", instanceInfo.GetNFSPort()), instanceInfo.GetAgentID())
+	cmd = exec.Command(
+		agentfsBin,
+		"serve",
+		"nfs",
+		"--bind",
+		instanceInfo.GetHostTapIP(),
+		"--port",
+		fmt.Sprintf("%d", instanceInfo.GetNFSPort()),
+		instanceInfo.GetAgentID())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
@@ -281,7 +301,7 @@ func StartAgentfsNFS(
 	return &NFSProcessCmd{cmd: cmd}, nil
 }
 
-func CleanupInstance(instance InstanceInfo) {
+func CleanupInstance(instance VirtualMachineInfo) {
 	log.Printf("Cleaning up instance %s", instance.GetID())
 
 	if proc := instance.GetNFSProcess(); proc != nil {
@@ -290,9 +310,16 @@ func CleanupInstance(instance InstanceInfo) {
 			proc.Wait()
 		}
 	}
-	exec.Command("pkill", "-f", fmt.Sprintf("agentfs serve nfs --bind %s --port %d", instance.GetHostTapIP(), instance.GetNFSPort())).Run()
+	exec.Command(
+		"pkill",
+		"-f",
+		fmt.Sprintf("agentfs serve nfs --bind %s --port %d", instance.GetHostTapIP(), instance.GetNFSPort())).Run()
 
-	RunCmd("ip", "link", "del", instance.GetTapDev())
+	RunCmd(
+		"ip",
+		"link",
+		"del",
+		instance.GetTapDev())
 
 	CleanupNAT(instance)
 

@@ -7,8 +7,8 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if cfg.URL != DefaultNATSURL {
-		t.Errorf("URL = %s, want %s", cfg.URL, DefaultNATSURL)
+	if cfg.URL != DefaultURL {
+		t.Errorf("URL = %s, want %s", cfg.URL, DefaultURL)
 	}
 	if cfg.Subject != DefaultSubject {
 		t.Errorf("Subject = %s, want %s", cfg.Subject, DefaultSubject)

@@ -22,10 +22,10 @@ func main() {
 		log.Fatalf("Failed to load NATS config: %v", err)
 	}
 
-	mgr := virtualMachine.NewInstanceManager(vmConfig.MaxVMs)
+	mgr := virtualMachine.NewVirtualMachineService(vmConfig.MaxVMs)
 
 	handler := func(message *messaging.Message) error {
-		vmRequest := message.ToVMRequest()
+		vmRequest := message.ToCreateVirtualMachineInput()
 		options := &virtualMachine.SpawnOptions{
 			AgentfsBin:     vmConfig.AgentfsBin,
 			FirecrackerBin: vmConfig.FirecrackerBin,

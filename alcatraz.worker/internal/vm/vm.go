@@ -17,19 +17,21 @@ type SpawnOptions struct {
 	AgentfsData    string
 }
 
-type VMBuilder struct {
-	instance *Instance
-	options  *SpawnOptions
+type VirtualMachineBuilder struct {
+	instance   *VirtualMachine
+	options    *SpawnOptions
+	formatters *Formatters
 }
 
-func NewVMBuilder() *VMBuilder {
-	return &VMBuilder{
-		instance: NewInstance(),
-		options:  &SpawnOptions{},
+func NewVirtualMachineBuilder() *VirtualMachineBuilder {
+	return &VirtualMachineBuilder{
+		instance:   NewVirtualMachine(),
+		options:    &SpawnOptions{},
+		formatters: DefaultFormatters,
 	}
 }
 
-func (builder *VMBuilder) WithRequest(req *CreateVMInput) *VMBuilder {
+func (builder *VirtualMachineBuilder) WithRequest(req *CreateVirtualMachineInput) *VirtualMachineBuilder {
 	builder.instance.id = req.ID
 	builder.instance.vcpus = req.VCPUs
 	builder.instance.memoryMib = req.MemoryMib
@@ -37,51 +39,56 @@ func (builder *VMBuilder) WithRequest(req *CreateVMInput) *VMBuilder {
 	return builder
 }
 
-func (builder *VMBuilder) WithIndex(idx int) *VMBuilder {
-	builder.instance.index = idx
-	builder.instance.tapDev = fmt.Sprintf("%s%d", BaseTapDev, idx)
-	builder.instance.hostTapIP = fmt.Sprintf("172.16.%d.1", idx)
-	builder.instance.vmIP = fmt.Sprintf("172.16.%d.2", idx)
-	builder.instance.subnet = fmt.Sprintf("172.16.%d.0/24", idx)
-	builder.instance.nfsPort = BaseNFSPort + idx
+func (builder *VirtualMachineBuilder) WithIndex(index int) *VirtualMachineBuilder {
+	builder.instance.index = index
+	builder.instance.tapDev = builder.formatters.TapDev.Format(index)
+	builder.instance.hostTapIP = builder.formatters.HostTapIP.Format(index)
+	builder.instance.vmIP = builder.formatters.VMIP.Format(index)
+	builder.instance.subnet = builder.formatters.Subnet.Format(index)
+	builder.instance.nfsPort = builder.formatters.NFS.Format(index)
 	return builder
 }
 
-func (builder *VMBuilder) WithAgentID(id string) *VMBuilder {
+func (builder *VirtualMachineBuilder) WithAgentID(id string) *VirtualMachineBuilder {
 	builder.instance.agentID = id
 	return builder
 }
 
-func (builder *VMBuilder) WithSpawnOptions(opts *SpawnOptions) *VMBuilder {
+func (builder *VirtualMachineBuilder) WithSpawnOptions(opts *SpawnOptions) *VirtualMachineBuilder {
 	builder.options = opts
 	return builder
 }
 
-func (builder *VMBuilder) Build() *Instance {
-	builder.instance.socket = fmt.Sprintf("%s/fc-%s.sock", builder.options.AgentfsData, builder.instance.agentID)
+func (builder *VirtualMachineBuilder) WithFormatters(f *Formatters) *VirtualMachineBuilder {
+	builder.formatters = f
+	return builder
+}
+
+func (builder *VirtualMachineBuilder) Build() *VirtualMachine {
+	builder.instance.socket = builder.formatters.Socket.Format(builder.instance.agentID)
 	return builder.instance
 }
 
 func Spawn(
 	context context.Context,
-	instanceManager *InstanceManager,
-	request *CreateVMInput,
-	options *SpawnOptions) (*Instance, error) {
+	instanceManager *VirtualMachineService,
+	createVMInput *CreateVirtualMachineInput,
+	options *SpawnOptions) (*VirtualMachine, error) {
 	index, err := instanceManager.Allocate()
 	if err != nil {
 		return nil, err
 	}
 
-	validatedReq := request.WithDefaults()
+	input := createVMInput.WithDefaults()
 
-	instance := NewVMBuilder().
-		WithRequest(validatedReq).
+	instance := NewVirtualMachineBuilder().
+		WithRequest(input).
 		WithIndex(index).
-		WithAgentID(validatedReq.ID).
+		WithAgentID(input.ID).
 		WithSpawnOptions(options).
 		Build()
 
-	log.Printf("Spawning VM %s (vCPUs: %d, Mem: %d MiB, idx: %d)", instance.id, instance.vcpus, instance.memoryMib, index)
+	log.Printf("Spawning VM %s (vCPUs: %d, Mem: %d MiB, index: %d)", instance.id, instance.vcpus, instance.memoryMib, index)
 
 	if err := SetupTap(instance); err != nil {
 		instanceManager.Release(index)
@@ -159,7 +166,7 @@ func Spawn(
 	}
 
 	if err := m.Start(context); err != nil {
-		instanceManager.RemoveInstance(instance.id)
+		instanceManager.RemoveVirtualMachine(instance.id)
 		CleanupInstance(instance)
 		instanceManager.Release(index)
 		return nil, fmt.Errorf("start machine: %w", err)
@@ -173,7 +180,7 @@ func Spawn(
 			log.Printf("VM %s wait error: %v", id, err)
 		}
 		log.Printf("VM %s exited", id)
-		instanceManager.RemoveInstance(id)
+		instanceManager.RemoveVirtualMachine(id)
 		CleanupInstance(instance)
 		instanceManager.Release(index)
 	}()
@@ -181,7 +188,7 @@ func Spawn(
 	return instance, nil
 }
 
-func StopVM(inst *Instance) error {
+func StopVM(inst *VirtualMachine) error {
 	if inst.machine != nil {
 		return inst.machine.StopVMM()
 	}

@@ -24,6 +24,61 @@ This document describes the integration of CNI-based networking using the Firecr
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Multiple VM Support
+
+The CNI-based setup fully supports running multiple VMs concurrently. Here's how it works:
+
+### Unique VM Identification
+Each VM gets:
+- **Unique VMID** (from `instance.id`) → used as CNI `containerID`
+- **Unique TAP device** (e.g., `fc-tap0`, `fc-tap1`, `fc-tap2`) → passed as CNI `IfName`
+
+From `vm.go:73,113-121`:
+```go
+tapDev := fmt.Sprintf("fc-tap%d", index)
+// ...
+CNIConfiguration: &firecracker.CNIConfiguration{
+    NetworkName: "alcatraz-bridge",
+    IfName:      tapDev,  // Unique per VM
+    VMIfName:    "eth0",
+    ...
+}
+```
+
+### CNI IPAM Handles Multiple IPs
+The `host-local` plugin in `cni/alcatraz-bridge.conflist`:
+- Allocates IPs from `172.16.0.10-250` (~240 available IPs)
+- Tracks allocations per `containerID` + `ifName` in `/var/lib/cni/networks/alcatraz-bridge/`
+- Each VM automatically gets a different IP
+
+### Bridge Networking
+The `bridge` plugin:
+- Creates shared bridge `alcatraz0` (first VM creates it, others join)
+- Attaches each VM's TAP device to the bridge
+- All VMs can communicate and share outbound internet access
+
+### VM Slot Management
+The `IntPool` in `instance_manager.go:124-130`:
+- Manages available VM slots (0 to maxVMs-1)
+- Ensures unique indices are allocated
+- Releases indices when VMs stop
+
+### IP Allocation Flow Example
+```
+VM 1 (fc-tap0) → CNI → host-local → 172.16.0.10
+VM 2 (fc-tap1) → CNI → host-local → 172.16.0.11
+VM 3 (fc-tap2) → CNI → host-local → 172.16.0.12
+...
+```
+
+### Scaling Limits
+- **Current config**: ~240 VMs (IP range `172.16.0.10-250`)
+- **To support more**: Edit `cni/alcatraz-bridge.conflist`:
+  - Change subnet to `/16` for 65,000+ IPs: `"subnet": "172.16.0.0/16"`
+  - Adjust `rangeStart` and `rangeEnd` accordingly
+
+---
+
 ## Key Components
 
 ### 1. CNI Configuration (`cni/alcatraz-bridge.conflist`)
@@ -188,4 +243,39 @@ go build -o bin/alcatraz-worker ./cmd/alcatraz-worker
 
 # Run (requires CAP_NET_ADMIN, CAP_SYS_ADMIN)
 sudo ./bin/alcatraz-worker
+```
+
+## Testing Multiple VMs
+
+To verify multiple VM support:
+
+```bash
+# Check VM slot allocation
+alcatraz-worker spawn --id test-vm1
+alcatraz-worker spawn --id test-vm2
+alcatraz-worker spawn --id test-vm3
+
+# List running VMs
+alcatraz-worker list
+
+# Check CNI IP allocations
+cat /var/lib/cni/networks/alcatraz-bridge/*
+
+# Cleanup
+alcatraz-worker stop --id test-vm1
+alcatraz-worker stop --id test-vm2
+alcatraz-worker stop --id test-vm3
+```
+
+### Verify CNI Plugin Functionality
+
+```bash
+# Check bridge device exists
+ip link show alcatraz0
+
+# Check TAP devices created per VM
+ip link show | grep fc-tap
+
+# Verify IP allocations in CNI state
+ls -la /var/lib/cni/networks/alcatraz-bridge/
 ```

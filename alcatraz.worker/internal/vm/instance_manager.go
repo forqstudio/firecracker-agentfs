@@ -10,17 +10,14 @@ import (
 type VirtualMachine struct {
 	id         string
 	vcpus      int
-	memoryMib int
+	memoryMib  int
 	kernelArgs string
-	index     int
+	index      int
 
 	tapDev    string
-	hostTapIP string
-	vmIP     string
-	subnet   string
-	nfsPort  int
-	socket   string
-	agentID  string
+	nfsPort   int
+	socket    string
+	agentID   string
 
 	machine *firecracker.Machine
 	nfsProc NFSProcess
@@ -63,14 +60,11 @@ func WithKernelArgs(args string) VirtualMachineOption {
 	}
 }
 
-func WithIndex(index int, formatters *Formatters) VirtualMachineOption {
+func WithIndex(index int) VirtualMachineOption {
 	return func(virtualMachine *VirtualMachine) {
 		virtualMachine.index = index
-		virtualMachine.tapDev = formatters.TapDev.Format(index)
-		virtualMachine.hostTapIP = formatters.HostTapIP.Format(index)
-		virtualMachine.vmIP = formatters.VMIP.Format(index)
-		virtualMachine.subnet = formatters.Subnet.Format(index)
-		virtualMachine.nfsPort = formatters.NFS.Format(index)
+		virtualMachine.tapDev = fmt.Sprintf("fc-tap%d", index)
+		virtualMachine.nfsPort = 8000 + index
 	}
 }
 
@@ -98,9 +92,9 @@ func (virtualMachine *VirtualMachine) GetMemoryMib() int     { return virtualMac
 func (virtualMachine *VirtualMachine) GetKernelArgs() string { return virtualMachine.kernelArgs }
 func (virtualMachine *VirtualMachine) GetIndex() int         { return virtualMachine.index }
 func (virtualMachine *VirtualMachine) GetTapDev() string     { return virtualMachine.tapDev }
-func (virtualMachine *VirtualMachine) GetHostTapIP() string  { return virtualMachine.hostTapIP }
-func (virtualMachine *VirtualMachine) GetVMIP() string       { return virtualMachine.vmIP }
-func (virtualMachine *VirtualMachine) GetSubnet() string     { return virtualMachine.subnet }
+func (virtualMachine *VirtualMachine) GetHostTapIP() string  { return fmt.Sprintf("172.16.%d.1", virtualMachine.index) }
+func (virtualMachine *VirtualMachine) GetVMIP() string       { return fmt.Sprintf("172.16.%d.2", virtualMachine.index) }
+func (virtualMachine *VirtualMachine) GetSubnet() string     { return fmt.Sprintf("172.16.%d.0/24", virtualMachine.index) }
 func (virtualMachine *VirtualMachine) GetNFSPort() int       { return virtualMachine.nfsPort }
 func (virtualMachine *VirtualMachine) GetSocket() string     { return virtualMachine.socket }
 func (virtualMachine *VirtualMachine) GetAgentID() string    { return virtualMachine.agentID }
@@ -116,7 +110,7 @@ func (virtualMachine *VirtualMachine) SetNFSProcess(proc NFSProcess) {
 }
 
 type VirtualMachineService struct {
-	mu              sync.Mutex
+	mutex           sync.Mutex
 	virtualMachines map[string]*VirtualMachine
 	pool            IntPool
 	maxVMs          int
@@ -124,7 +118,7 @@ type VirtualMachineService struct {
 
 type IntPool struct {
 	items []int
-	mu    sync.Mutex
+	mutex sync.Mutex
 }
 
 func NewIntPool(maxSize int) IntPool {
@@ -136,14 +130,14 @@ func NewIntPool(maxSize int) IntPool {
 }
 
 func (pool *IntPool) Len() int {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 	return len(pool.items)
 }
 
 func (pool *IntPool) Allocate() (int, error) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 	if len(pool.items) == 0 {
 		return 0, fmt.Errorf("no available slots")
 	}
@@ -153,12 +147,21 @@ func (pool *IntPool) Allocate() (int, error) {
 }
 
 func (pool *IntPool) Release(index int) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 	pool.items = append(pool.items, index)
 }
 
-func NewVirtualMachineService(maxVMs int) *VirtualMachineService {
+func NewVirtualMachineService() *VirtualMachineService {
+	cfg := GetConfig()
+	return &VirtualMachineService{
+		virtualMachines: make(map[string]*VirtualMachine),
+		pool:            NewIntPool(cfg.MaxVMs),
+		maxVMs:          cfg.MaxVMs,
+	}
+}
+
+func newVirtualMachineServiceWithMax(maxVMs int) *VirtualMachineService {
 	return &VirtualMachineService{
 		virtualMachines: make(map[string]*VirtualMachine),
 		pool:            NewIntPool(maxVMs),
@@ -167,8 +170,8 @@ func NewVirtualMachineService(maxVMs int) *VirtualMachineService {
 }
 
 func (virtualMachineService *VirtualMachineService) Allocate() (int, error) {
-	virtualMachineService.mu.Lock()
-	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.mutex.Lock()
+	defer virtualMachineService.mutex.Unlock()
 	if len(virtualMachineService.pool.items) == 0 {
 		return 0, fmt.Errorf("no available VM slots (max %d)", virtualMachineService.maxVMs)
 	}
@@ -178,20 +181,20 @@ func (virtualMachineService *VirtualMachineService) Allocate() (int, error) {
 }
 
 func (virtualMachineService *VirtualMachineService) Release(index int) {
-	virtualMachineService.mu.Lock()
-	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.mutex.Lock()
+	defer virtualMachineService.mutex.Unlock()
 	virtualMachineService.pool.items = append(virtualMachineService.pool.items, index)
 }
 
 func (virtualMachineService *VirtualMachineService) AddVirtualMachine(virtualMachine *VirtualMachine) {
-	virtualMachineService.mu.Lock()
-	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.mutex.Lock()
+	defer virtualMachineService.mutex.Unlock()
 	virtualMachineService.virtualMachines[virtualMachine.id] = virtualMachine
 }
 
 func (virtualMachineService *VirtualMachineService) RemoveVirtualMachine(id string) {
-	virtualMachineService.mu.Lock()
-	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.mutex.Lock()
+	defer virtualMachineService.mutex.Unlock()
 	delete(virtualMachineService.virtualMachines, id)
 }
 
@@ -200,14 +203,14 @@ func (virtualMachineService *VirtualMachineService) GetMaxVMs() int {
 }
 
 func (virtualMachineService *VirtualMachineService) GetVirtualMachine(id string) *VirtualMachine {
-	virtualMachineService.mu.Lock()
-	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.mutex.Lock()
+	defer virtualMachineService.mutex.Unlock()
 	return virtualMachineService.virtualMachines[id]
 }
 
 func (virtualMachineService *VirtualMachineService) ListVirtualMachines() []*VirtualMachine {
-	virtualMachineService.mu.Lock()
-	defer virtualMachineService.mu.Unlock()
+	virtualMachineService.mutex.Lock()
+	defer virtualMachineService.mutex.Unlock()
 	instances := make([]*VirtualMachine, 0, len(virtualMachineService.virtualMachines))
 	for _, inst := range virtualMachineService.virtualMachines {
 		instances = append(instances, inst)

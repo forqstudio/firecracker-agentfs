@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewInstanceManager(t *testing.T) {
-	mgr := NewVirtualMachineService(3)
+	mgr := newVirtualMachineServiceWithMax(3)
 	if mgr == nil {
 		t.Fatal("NewInstanceManager returned nil")
 	}
@@ -18,7 +18,7 @@ func TestNewInstanceManager(t *testing.T) {
 }
 
 func TestInstanceManagerAllocate(t *testing.T) {
-	mgr := NewVirtualMachineService(3)
+	mgr := newVirtualMachineServiceWithMax(3)
 
 	firstIndex, err := mgr.Allocate()
 	if err != nil {
@@ -38,7 +38,7 @@ func TestInstanceManagerAllocate(t *testing.T) {
 }
 
 func TestInstanceManagerAllocateExhausted(t *testing.T) {
-	mgr := NewVirtualMachineService(2)
+	mgr := newVirtualMachineServiceWithMax(2)
 
 	_, err := mgr.Allocate()
 	if err != nil {
@@ -56,7 +56,7 @@ func TestInstanceManagerAllocateExhausted(t *testing.T) {
 }
 
 func TestInstanceManagerRelease(t *testing.T) {
-	mgr := NewVirtualMachineService(2)
+	mgr := newVirtualMachineServiceWithMax(2)
 
 	firstIndex, _ := mgr.Allocate()
 	if firstIndex != 0 {
@@ -75,7 +75,7 @@ func TestInstanceManagerRelease(t *testing.T) {
 }
 
 func TestInstanceManagerAddRemove(t *testing.T) {
-	mgr := NewVirtualMachineService(5)
+	mgr := newVirtualMachineServiceWithMax(5)
 
 	inst := NewVirtualMachine(WithID("test-vm-1"))
 	mgr.AddVirtualMachine(inst)

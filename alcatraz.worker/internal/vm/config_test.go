@@ -69,7 +69,4 @@ func TestConstants(t *testing.T) {
 	if DefaultMemMib <= 0 {
 		t.Error("DefaultMemMib should be positive")
 	}
-	if BaseNFSPort <= 0 {
-		t.Error("BaseNFSPort should be positive")
-	}
 }

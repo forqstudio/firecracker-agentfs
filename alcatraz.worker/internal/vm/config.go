@@ -1,11 +1,7 @@
 package vm
 
 import (
-	"os"
-	"strconv"
-
 	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 )
 
 const EnvFile = ".env"
@@ -18,11 +14,7 @@ const (
 	RootfsPath     = "../alcatraz.core/rootfs"
 	AgentfsData    = "../alcatraz.core/.agentfs"
 	AgentfsBin     = "/home/dev/.cargo/bin/agentfs"
-
-	BaseTapDev    = "fc-tap"
-	BaseHostTapIP = "172.16.0.1"
-	BaseVMIP      = "172.16.0.2"
-	BaseNFSPort   = 11111
+	CNIConfDir     = "/etc/cni/net.d"
 
 	VMHostname = "alcatraz"
 	GuestMAC   = "AA:FC:00:00:00:01"
@@ -34,42 +26,12 @@ const (
 
 type VirtualMachineConfig struct {
 	MaxVMs         int
+	CNIConfDir     string
 	AgentfsBin     string
 	AgentfsData    string
 	FirecrackerBin string
 	Rootfs         string
 	Kernel         string
-}
-
-func LoadConfig() (*VirtualMachineConfig, error) {
-	if err := godotenv.Load(EnvFile); err != nil {
-		return nil, err
-	}
-
-	cfg := &VirtualMachineConfig{}
-
-	if v := os.Getenv("MAX_VMS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			cfg.MaxVMs = n
-		}
-	}
-	if v := os.Getenv("FIRECRACKER_BIN"); v != "" {
-		cfg.FirecrackerBin = v
-	}
-	if v := os.Getenv("KERNEL_PATH"); v != "" {
-		cfg.Kernel = v
-	}
-	if v := os.Getenv("ROOTFS_PATH"); v != "" {
-		cfg.Rootfs = v
-	}
-	if v := os.Getenv("AGENTFS_DATA"); v != "" {
-		cfg.AgentfsData = v
-	}
-	if v := os.Getenv("AGENTFS_BIN"); v != "" {
-		cfg.AgentfsBin = v
-	}
-
-	return cfg, nil
 }
 
 func DefaultConfig() *VirtualMachineConfig {
@@ -80,30 +42,15 @@ func DefaultConfig() *VirtualMachineConfig {
 		Rootfs:         RootfsPath,
 		Kernel:         KernelPath,
 		AgentfsData:    AgentfsData,
+		CNIConfDir:     CNIConfDir,
 	}
 }
 
-type Formatters struct {
-	TapDev    TapDevFormatter
-	NFS       NFSPortFormatter
-	Socket    SocketFormatter
-	HostTapIP HostTapIPFormatter
-	VMIP      IPFormatter
-	Subnet    SubnetFormatter
-}
+var defaultConfig = DefaultConfig()
 
-func NewFormatters(cfg *VirtualMachineConfig) *Formatters {
-	return &Formatters{
-		TapDev:    TapDevFormatter{Prefix: BaseTapDev, MaxSlots: cfg.MaxVMs},
-		NFS:       NFSPortFormatter{BasePort: BaseNFSPort},
-		Socket:    SocketFormatter{AgentfsDirectory: cfg.AgentfsData},
-		HostTapIP: HostTapIPFormatter{},
-		VMIP:      IPFormatter{},
-		Subnet:    SubnetFormatter{},
-	}
+func GetConfig() *VirtualMachineConfig {
+	return defaultConfig
 }
-
-var DefaultFormatters = NewFormatters(DefaultConfig())
 
 type CreateVirtualMachineInput struct {
 	ID         string `json:"id,omitempty"`

@@ -12,17 +12,14 @@ import (
 )
 
 func main() {
-	vmConfig, err := virtualMachine.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load VM config: %v", err)
-	}
+	vmConfig := virtualMachine.GetConfig()
 
 	natsConfig, err := messaging.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load NATS config: %v", err)
 	}
 
-	mgr := virtualMachine.NewVirtualMachineService(vmConfig.MaxVMs)
+	mgr := virtualMachine.NewVirtualMachineService()
 
 	handler := func(message *messaging.Message) error {
 		vmRequest := message.ToCreateVirtualMachineInput()

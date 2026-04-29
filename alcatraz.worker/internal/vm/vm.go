@@ -18,34 +18,28 @@ type SpawnOptions struct {
 }
 
 type VirtualMachineBuilder struct {
-	instance   *VirtualMachine
-	options    *SpawnOptions
-	formatters *Formatters
+	instance *VirtualMachine
+	options  *SpawnOptions
 }
 
 func NewVirtualMachineBuilder() *VirtualMachineBuilder {
 	return &VirtualMachineBuilder{
-		instance:   NewVirtualMachine(),
-		options:    &SpawnOptions{},
-		formatters: DefaultFormatters,
+		instance: NewVirtualMachine(),
+		options:  &SpawnOptions{},
 	}
 }
 
-func (builder *VirtualMachineBuilder) WithRequest(req *CreateVirtualMachineInput) *VirtualMachineBuilder {
-	builder.instance.id = req.ID
-	builder.instance.vcpus = req.VCPUs
-	builder.instance.memoryMib = req.MemoryMib
-	builder.instance.kernelArgs = req.KernelArgs
+func (builder *VirtualMachineBuilder) WithInput(input *CreateVirtualMachineInput) *VirtualMachineBuilder {
+	builder.instance.id = input.ID
+	builder.instance.vcpus = input.VCPUs
+	builder.instance.memoryMib = input.MemoryMib
+	builder.instance.kernelArgs = input.KernelArgs
 	return builder
 }
 
 func (builder *VirtualMachineBuilder) WithIndex(index int) *VirtualMachineBuilder {
 	builder.instance.index = index
-	builder.instance.tapDev = builder.formatters.TapDev.Format(index)
-	builder.instance.hostTapIP = builder.formatters.HostTapIP.Format(index)
-	builder.instance.vmIP = builder.formatters.VMIP.Format(index)
-	builder.instance.subnet = builder.formatters.Subnet.Format(index)
-	builder.instance.nfsPort = builder.formatters.NFS.Format(index)
+	builder.instance.nfsPort = 8000 + index
 	return builder
 }
 
@@ -54,77 +48,62 @@ func (builder *VirtualMachineBuilder) WithAgentID(id string) *VirtualMachineBuil
 	return builder
 }
 
-func (builder *VirtualMachineBuilder) WithSpawnOptions(opts *SpawnOptions) *VirtualMachineBuilder {
-	builder.options = opts
-	return builder
-}
-
-func (builder *VirtualMachineBuilder) WithFormatters(f *Formatters) *VirtualMachineBuilder {
-	builder.formatters = f
+func (builder *VirtualMachineBuilder) WithSpawnOptions(spawnOptions *SpawnOptions) *VirtualMachineBuilder {
+	builder.options = spawnOptions
 	return builder
 }
 
 func (builder *VirtualMachineBuilder) Build() *VirtualMachine {
-	builder.instance.socket = builder.formatters.Socket.Format(builder.instance.agentID)
+	builder.instance.socket = fmt.Sprintf("/tmp/alcatraz-%s.sock", builder.instance.agentID)
 	return builder.instance
 }
 
 func Spawn(
 	context context.Context,
-	instanceManager *VirtualMachineService,
+	virtualMachineService *VirtualMachineService,
 	createVMInput *CreateVirtualMachineInput,
-	options *SpawnOptions) (*VirtualMachine, error) {
-	index, err := instanceManager.Allocate()
+	spawnOptions *SpawnOptions) (*VirtualMachine, error) {
+	index, err := virtualMachineService.Allocate()
 	if err != nil {
 		return nil, err
 	}
 
 	input := createVMInput.WithDefaults()
 
+	tapDev := fmt.Sprintf("fc-tap%d", index)
+
 	instance := NewVirtualMachineBuilder().
-		WithRequest(input).
+		WithInput(input).
 		WithIndex(index).
 		WithAgentID(input.ID).
-		WithSpawnOptions(options).
+		WithSpawnOptions(spawnOptions).
 		Build()
 
+	instance.tapDev = tapDev
 	log.Printf("Spawning VM %s (vCPUs: %d, Mem: %d MiB, index: %d)", instance.id, instance.vcpus, instance.memoryMib, index)
 
-	if err := SetupTap(instance, instanceManager.GetMaxVMs()); err != nil {
-		instanceManager.Release(index)
-		return nil, fmt.Errorf("setup tap: %w", err)
-	}
-
-	if err := PrepareAgentfsOverlay(instance, options.AgentfsBin, options.Rootfs, options.AgentfsData); err != nil {
-		CleanupInstance(instance, instanceManager.GetMaxVMs())
-		instanceManager.Release(index)
+	if err := PrepareAgentfsOverlay(instance, spawnOptions.AgentfsBin, spawnOptions.Rootfs, spawnOptions.AgentfsData); err != nil {
+		virtualMachineService.Release(index)
 		return nil, fmt.Errorf("prepare agentfs: %w", err)
 	}
 
-	nfsProc, err := StartAgentfsNFS(instance, options.AgentfsBin)
+	nfsProc, err := StartAgentfsNFS(instance, spawnOptions.AgentfsBin)
 	if err != nil {
-		CleanupInstance(instance, instanceManager.GetMaxVMs())
-		instanceManager.Release(index)
+		virtualMachineService.Release(index)
 		return nil, fmt.Errorf("start agentfs nfs: %w", err)
 	}
 	instance.SetNFSProcess(nfsProc)
 
-	subnetMask := "255.255.255.0"
 	bootArgs := fmt.Sprintf(
-		"console=ttyS0 reboot=k panic=1 pci=off %s ip=%s::%s:%s:%s:eth0:off root=/dev/nfs nfsroot=%s:/,nfsvers=3,tcp,nolock,port=%d,mountport=%d rw init=/init",
+		"console=ttyS0 reboot=k panic=1 pci=off %s root=/dev/nfs nfsroot=${GATEWAY_IP}:/,nfsvers=3,tcp,nolock,port=%d,mountport=%d rw init=/init",
 		instance.kernelArgs,
-		instance.vmIP,
-		instance.hostTapIP,
-		subnetMask,
-		VMHostname,
-		instance.hostTapIP,
 		instance.nfsPort,
 		instance.nfsPort,
 	)
 
 	cfg := firecracker.Config{
 		SocketPath:      instance.socket,
-		KernelImagePath: options.Kernel,
+		KernelImagePath: spawnOptions.Kernel,
 		KernelArgs:      bootArgs,
 		MachineCfg: models.MachineConfiguration{
 			VcpuCount:  firecracker.Int64(int64(instance.vcpus)),
@@ -132,41 +111,42 @@ func Spawn(
 		},
 		NetworkInterfaces: []firecracker.NetworkInterface{
 			{
-				StaticConfiguration: &firecracker.StaticNetworkConfiguration{
-					MacAddress:  GuestMAC,
-					HostDevName: instance.tapDev,
+				CNIConfiguration: &firecracker.CNIConfiguration{
+					NetworkName: "alcatraz-bridge",
+					IfName:      tapDev,
+					VMIfName:    "eth0",
+					ConfDir:     "/etc/cni/net.d",
+					BinPath:     []string{"/opt/cni/bin"},
 				},
 			},
 		},
+		VMID: instance.id,
 	}
 
-	fcBinPath := options.FirecrackerBin
-	if !FileExists(fcBinPath) {
-		CleanupInstance(instance, instanceManager.GetMaxVMs())
-		instanceManager.Release(index)
-		return nil, fmt.Errorf("firecracker binary not found: %s", fcBinPath)
+	firecrackerBinPath := spawnOptions.FirecrackerBin
+	if !FileExists(firecrackerBinPath) {
+		virtualMachineService.Release(index)
+		return nil, fmt.Errorf("firecracker binary not found: %s", firecrackerBinPath)
 	}
 
 	cmd := firecracker.VMCommandBuilder{}.
-		WithBin(fcBinPath).
+		WithBin(firecrackerBinPath).
 		WithSocketPath(instance.socket).
 		Build(context)
 
 	m, err := firecracker.NewMachine(context, cfg, firecracker.WithProcessRunner(cmd))
 	if err != nil {
-		CleanupInstance(instance, instanceManager.GetMaxVMs())
-		instanceManager.Release(index)
+		virtualMachineService.Release(index)
 		return nil, fmt.Errorf("create machine: %w", err)
 	}
 
 	if err := m.Start(context); err != nil {
-		instanceManager.RemoveVirtualMachine(instance.id)
-		CleanupInstance(instance, instanceManager.GetMaxVMs())
-		instanceManager.Release(index)
+		virtualMachineService.RemoveVirtualMachine(instance.id)
+		virtualMachineService.Release(index)
 		return nil, fmt.Errorf("start machine: %w", err)
 	}
 
-	log.Printf("VM %s started (IP: %s)", instance.id, instance.vmIP)
+	log.Printf("VM %s started", instance.id)
 
 	go func() {
 		id := instance.id
@@ -174,17 +154,16 @@ func Spawn(
 			log.Printf("VM %s wait error: %v", id, err)
 		}
 		log.Printf("VM %s exited", id)
-		instanceManager.RemoveVirtualMachine(id)
-		CleanupInstance(instance, instanceManager.GetMaxVMs())
-		instanceManager.Release(index)
+		virtualMachineService.RemoveVirtualMachine(id)
+		virtualMachineService.Release(index)
 	}()
 
 	return instance, nil
 }
 
-func StopVM(inst *VirtualMachine) error {
-	if inst.machine != nil {
-		return inst.machine.StopVMM()
+func StopVM(virtualMachine *VirtualMachine) error {
+	if virtualMachine.machine != nil {
+		return virtualMachine.machine.StopVMM()
 	}
 	return nil
 }

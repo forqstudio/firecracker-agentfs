@@ -315,8 +315,6 @@ func CleanupInstance(instance VirtualMachineInfo, maxSlots int) {
 		"-f",
 		fmt.Sprintf("agentfs serve nfs --bind %s --port %d", instance.GetHostTapIP(), instance.GetNFSPort())).Run()
 
-	CleanupTap(instance, maxSlots)
-
 	if FileExists(instance.GetSocket()) {
 		os.Remove(instance.GetSocket())
 	}

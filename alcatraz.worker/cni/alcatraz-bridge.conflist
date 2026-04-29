@@ -1,0 +1,25 @@
+{
+  "cniVersion": "0.4.0",
+  "name": "alcatraz-bridge",
+  "plugins": [
+    {
+      "type": "bridge",
+      "bridge": "alcatraz0",
+      "ipMasq": true,
+      "ipam": {
+        "type": "host-local",
+        "subnet": "172.16.0.0/24",
+        "rangeStart": "172.16.0.10",
+        "rangeEnd": "172.16.0.250",
+        "routes": [
+          {
+            "dst": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    {
+      "type": "tc-redirect-tap"
+    }
+  ]
+}
